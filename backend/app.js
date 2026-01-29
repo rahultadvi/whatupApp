@@ -29,6 +29,10 @@ app.use(
 
 app.use(bodyParser.json());
 
+app.get("/", (req, res) => {
+  res.send("Backend is running successfully 🚀");
+});
+
 app.use(
 "/images",
 express.static(path.join(process.cwd(), "public/images"))
