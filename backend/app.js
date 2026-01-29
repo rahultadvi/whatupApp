@@ -16,7 +16,7 @@ connectDB();
 
 
 const allowedOrigins = [
-  "https://whatupapp.onrender.com"
+  "https://whatupapp-2.onrender.com"
 ];
 
 app.use(
