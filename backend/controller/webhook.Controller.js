@@ -521,14 +521,15 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
       console.error(`Failed to send product ${product.name}:`, error.message);
       
       // Fallback to text
-      await WhatsAppService.sendText(phone,
-        `${state.typeEmoji} *${product.name}*\n\n` +
-        `${product.description}\n\n` +
-        `💰 Price: $${product.price}\n` +
-        `📏 Sizes: ${product.sizes.join(', ')}\n` +
-        `⭐ Rating: ${product.rating}/5\n` +
-        `🆔 Code: SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3, '0')}`
-      );
+     await WhatsAppService.sendText(
+  phone,
+  `🛒 *Ready to Order?*\n\n` +
+  `Select how you'd like to proceed:\n\n` +
+  `1️⃣ Store Pickup\n` +
+  `2️⃣ Home Delivery\n\n` +
+  `Reply with *1* or *2*`
+);
+
     }
   }
 
@@ -556,6 +557,7 @@ async function handlePurchase(phone, text, state) {
     await WhatsAppService.sendText(phone,
       `🏪 *Store Pickup Selected*\n\n` +
       `📍 *Store Location:*\n` +
+      
       `Sarwan Shoes Store\n` +
       `123 Fashion Street, City Center\n` +
       `🕐 Open: 10AM - 9PM (Mon-Sat)\n\n` +
