@@ -225,16 +225,15 @@ export const receiveMessage = async (req, res) => {
     const userText = message.text?.body?.trim() || "";
     const messageId = message.id;
 
-    //////////////////////////////////////////////////
+    // Duplicate message protection
+    if (processedMessages.has(messageId)) {
+      console.log(`🔄 Duplicate message ignored: ${messageId}`);
+      return;
+    }
+    processedMessages.add(messageId);
 
-   if (processedMessages.has(messageId)) {
-  console.log(`🔄 Duplicate message ignored: ${messageId}`);
-  return;
-}
-processedMessages.add(messageId);
 
-// ✅ 2. END / EXIT / BYE / CANCEL HANDLER (AFTER duplicate check)
-const endWords = ["END", "EXIT", "BYE", "CANCEL"];
+    const endWords = ["END", "EXIT", "BYE", "CANCEL"];
 
 if (endWords.includes(userText.toUpperCase())) {
   userState.delete(from);
@@ -246,8 +245,18 @@ if (endWords.includes(userText.toUpperCase())) {
     "👉 To start again, type *start*"
   );
 
-  return;
+  return; // ⛔ stop further execution
 }
+
+
+    // Initialize user state
+    if (!userState.has(from)) {
+      userState.set(from, { 
+        step: "WELCOME",
+        lastActivity: Date.now()
+      });
+    }
+    
     const state = userState.get(from);
     state.lastActivity = Date.now();
 
