@@ -225,7 +225,23 @@ export const receiveMessage = async (req, res) => {
     const userText = message.text?.body?.trim() || "";
     const messageId = message.id;
 
-    // Duplicate message protection
+    // ===== END / EXIT / BYE / CANCEL HANDLER =====
+const endWords = ["END", "EXIT", "BYE", "CANCEL"];
+
+if (endWords.includes(userText.toUpperCase())) {
+  userState.delete(from);
+
+  await WhatsAppService.sendText(
+    from,
+    "🛑 *Chat Ended Successfully*\n\n" +
+    "Thank you for visiting *Sarwan Shoes Store* 👟\n\n" +
+    "👉 To start again, type *start*"
+  );
+
+  return; // 🔥 VERY IMPORTANT (yahin function stop)
+}
+
+  // Duplicate message protection
     if (processedMessages.has(messageId)) {
       console.log(`🔄 Duplicate message ignored: ${messageId}`);
       return;
