@@ -534,17 +534,17 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
   }
 
   // Ask for purchase method
-  setTimeout(async () => {
-    await WhatsAppService.sendInteractiveButtons(
-      phone,
-      `🛒 *Ready to Order?*\n\n` +
-      `Select how you'd like to proceed:`,
-      [
-        { title: `🏪 Store Pickup` },
-        { title: `🚚 Home Delivery` }
-      ]
-    );
-  }, 1000);
+setTimeout(async () => {
+  await WhatsAppService.sendText(
+    phone,
+    `🛒 *Ready to Order?*\n\n` +
+    `Select how you'd like to proceed:\n\n` +
+    `1️⃣ Store Pickup\n` +
+    `2️⃣ Home Delivery\n\n` +
+    `Reply with *1* or *2*`
+  );
+}, 1000);
+
 }
 
 async function handlePurchase(phone, text, state) {
