@@ -533,11 +533,17 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
       
       // Send image with caption
    for (const img of product.images) {
+  // await WhatsAppService.sendImage(
+  //   phone,
+  //   img,
+  //   productMessage.trim()
+  // );
   await WhatsAppService.sendImage(
-    phone,
-    img,
-    productMessage.trim()
-  );
+  phone,
+  img,
+  `${index + 1}️⃣ ${productMessage.trim()}`
+);
+
 
   // thoda delay (important)
   await new Promise(res => setTimeout(res, 1000));
@@ -561,18 +567,30 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
 
     }
   }
+  await WhatsAppService.sendText(
+  phone,
+  `🛒 *Select Shoe to Buy*\n\n` +
+  `Reply with:\n` +
+  `1️⃣ Shoe 1\n` +
+  `2️⃣ Shoe 2\n` +
+  `3️⃣ Shoe 3`
+);
+
+// next step
+state.step = "PURCHASE";
+
 
   // Ask for purchase method
-setTimeout(async () => {
-  await WhatsAppService.sendText(
-    phone,
-    `🛒 *Ready to Order?*\n\n` +
-    `Select how you'd like to proceed:\n\n` +
-    `1️⃣ Store Pickup\n` +
-    `2️⃣ Home Delivery\n\n` +
-    `Reply with *1* or *2*`
-  );
-}, 1000);
+// setTimeout(async () => {
+//   await WhatsAppService.sendText(
+//     phone,
+//     `🛒 *Ready to Order?*\n\n` +
+//     `Select how you'd like to proceed:\n\n` +
+//     `1️⃣ Store Pickup\n` +
+//     `2️⃣ Home Delivery\n\n` +
+//     `Reply with *1* or *2*`
+//   );
+// }, 1000);
 
 }
 
