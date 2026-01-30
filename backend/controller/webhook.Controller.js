@@ -161,20 +161,27 @@ const enhanceProducts = () => {
     const discount = product.price > 50 ? 10 : (product.price > 30 ? 5 : 0);
     const originalPrice = discount > 0 ? (product.price / (1 - discount/100)).toFixed(2) : null;
     
-    return {
-      ...product,
-      imageUrl: imageUrl, // Always use public URL
-      colors: categoryColors[product.type] || ["Black", "Brown", "White"],
-      rating: rating,
-      features: features,
-      discount: discount,
-      originalPrice: originalPrice,
-      inStock: true,
-      deliveryDays: product.type === "FORMAL" ? 5 : 3,
-      material: product.type === "FORMAL" ? "Genuine Leather" : 
-                product.type === "SPORTS" ? "Breathable Mesh" : "Synthetic Fabric",
-      warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
-    };
+  return {
+  ...product,
+  images: product.images && product.images.length > 0
+    ? product.images
+    : [imageUrl],
+  colors: categoryColors[product.type],
+  rating,
+  features,
+  discount,
+  originalPrice,
+  inStock: true,
+  deliveryDays: product.type === "FORMAL" ? 5 : 3,
+  material:
+    product.type === "FORMAL"
+      ? "Genuine Leather"
+      : product.type === "SPORTS"
+      ? "Breathable Mesh"
+      : "Synthetic Fabric",
+  warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
+};
+
   });
   
   console.log(`✅ Enhanced ${enhancedProducts.length} products with PUBLIC images`);
@@ -508,12 +515,17 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
       console.log(`📤 Sending image for ${product.name}: ${product.imageUrl}`);
       
       // Send image with caption
-      await WhatsAppService.sendImage(
-        phone,
-        product.imageUrl,
-        productMessage.trim()
-      );
-      
+   for (const img of product.images) {
+  await WhatsAppService.sendImage(
+    phone,
+    img,
+    productMessage.trim()
+  );
+
+  // thoda delay (important)
+  await new Promise(res => setTimeout(res, 1000));
+}
+
       // Delay between messages
       await new Promise(resolve => setTimeout(resolve, 2000));
       
