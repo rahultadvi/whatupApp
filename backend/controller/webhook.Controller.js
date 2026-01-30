@@ -424,7 +424,7 @@ async function handleBudget(phone, text, state) {
 }
 
 async function handleSizeAndShowProducts(phone, text, state) {
-  const validOptions = ['1', '2', '3', '4', '5', '6'];
+  const validOptions = ['1', '2', '3', '4', '5', '6','7','8','9','10'];
   
   if (!validOptions.includes(text)) {
     await WhatsAppService.sendText(phone,
@@ -434,27 +434,36 @@ async function handleSizeAndShowProducts(phone, text, state) {
   }
 
   // Filter products
-  let matchedProducts = [];
+  // let matchedProducts = [];
   
-  if (text === '1') {
-    // All sizes
-    matchedProducts = enhancedProducts.filter(p =>
-      p.type === state.type &&
-      p.price >= state.min &&
-      p.price <= state.max
-    );
-  } else {
-    const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
-    const selectedSize = sizeMap[text];
-    state.selectedSize = selectedSize;
+  // if (text === '1') {
+  //   // All sizes
+  //   matchedProducts = enhancedProducts.filter(p =>
+  //     p.type === state.type &&
+  //     p.price >= state.min &&
+  //     p.price <= state.max
+  //   );
+  // } else {
+  //   const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
+  //   const selectedSize = sizeMap[text];
+  //   state.selectedSize = selectedSize;
     
-    matchedProducts = enhancedProducts.filter(p =>
-      p.type === state.type &&
-      p.price >= state.min &&
-      p.price <= state.max &&
-      p.sizes.includes(selectedSize)
-    );
-  }
+  //   matchedProducts = enhancedProducts.filter(p =>
+  //     p.type === state.type &&
+  //     p.price >= state.min &&
+  //     p.price <= state.max &&
+  //     p.sizes.includes(selectedSize)
+  //   );
+  // }
+  // ✅ ALWAYS show shoes of ALL sizes
+state.selectedSize = "All Sizes";
+
+matchedProducts = enhancedProducts.filter(p =>
+  p.type === state.type &&
+  p.price >= state.min &&
+  p.price <= state.max
+);
+
 
   if (matchedProducts.length === 0) {
     await WhatsAppService.sendText(phone,
