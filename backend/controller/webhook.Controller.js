@@ -544,9 +544,9 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
   //   img,
   //   productMessage.trim()
   // );
-  await WhatsAppService.sendImage(
+await WhatsAppService.sendImage(
   phone,
-  img,
+  product.images[0], // 👈 ONLY FIRST IMAGE
   `${index + 1}️⃣ ${productMessage.trim()}`
 );
 
