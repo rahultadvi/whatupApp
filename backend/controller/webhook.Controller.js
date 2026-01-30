@@ -277,6 +277,12 @@ if (endWords.includes(userText.toUpperCase())) {
       case "SIZE":
         await handleSizeAndShowProducts(from, userText, state);
         break;
+
+          // 👇👇 YAHI ADD KARNA HAI
+  case "SELECT_SHOE":
+    await handleSelectShoe(from, userText, state);
+    break;
+
       case "PURCHASE":
         await handlePurchase(from, userText, state);
         break;
@@ -577,7 +583,7 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
 );
 
 // next step
-state.step = "PURCHASE";
+state.step = "SELECT_SHOE";
 
 
   // Ask for purchase method
@@ -593,6 +599,60 @@ state.step = "PURCHASE";
 // }, 1000);
 
 }
+
+async function handleSelectShoe(phone, text, state) {
+  const index = Number(text) - 1;
+
+  // validation
+  if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
+    await WhatsAppService.sendText(
+      phone,
+      "❌ Invalid selection.\nReply with 1️⃣, 2️⃣ or 3️⃣"
+    );
+    return;
+  }
+
+  const product = state.selectedShoes[index];
+  state.finalShoe = product; // save selected shoe
+
+  const productMessage = `
+${state.typeEmoji} *${product.name}*
+
+${product.description}
+
+💰 *Price:* $${product.price}${product.discount > 0 ? ` (${product.discount}% OFF)` : ''}
+${product.originalPrice ? `🎯 Was: $${product.originalPrice}\n` : ''}
+📏 *Sizes:* ${product.sizes.join(', ')}
+🎨 *Colors:* ${product.colors.join(', ')}
+⭐ *Rating:* ${product.rating}/5
+
+🔧 *Features:* ${product.features.join(', ')}
+🧵 *Material:* ${product.material}
+🛡️ *Warranty:* ${product.warranty}
+📦 *Delivery:* ${product.deliveryDays} days
+
+🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3, '0')}
+`;
+
+  // 👉 FULL CARD SEND (image + caption)
+  for (const img of product.images) {
+    await WhatsAppService.sendImage(phone, img, productMessage.trim());
+    await new Promise(res => setTimeout(res, 1000));
+  }
+
+  // move to purchase step
+  state.step = "PURCHASE";
+
+  // ask pickup / delivery
+  await WhatsAppService.sendText(
+    phone,
+    `🛒 *Ready to Order?*\n\n` +
+    `1️⃣ Store Pickup\n` +
+    `2️⃣ Home Delivery\n\n` +
+    `Reply with *1* or *2*`
+  );
+}
+
 
 async function handlePurchase(phone, text, state) {
   const response = text.toLowerCase();
