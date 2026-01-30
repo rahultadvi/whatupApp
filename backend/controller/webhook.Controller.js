@@ -424,7 +424,7 @@ async function handleBudget(phone, text, state) {
 }
 
 async function handleSizeAndShowProducts(phone, text, state) {
-  const validOptions = ['1', '2', '3', '4', '5', '6','7','8','9','10'];
+  const validOptions = ['1', '2', '3', '4', '5', '6'];
   
   if (!validOptions.includes(text)) {
     await WhatsAppService.sendText(phone,
@@ -434,36 +434,27 @@ async function handleSizeAndShowProducts(phone, text, state) {
   }
 
   // Filter products
-  // let matchedProducts = [];
+  let matchedProducts = [];
   
-  // if (text === '1') {
-  //   // All sizes
-  //   matchedProducts = enhancedProducts.filter(p =>
-  //     p.type === state.type &&
-  //     p.price >= state.min &&
-  //     p.price <= state.max
-  //   );
-  // } else {
-  //   const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
-  //   const selectedSize = sizeMap[text];
-  //   state.selectedSize = selectedSize;
+  if (text === '1') {
+    // All sizes
+    matchedProducts = enhancedProducts.filter(p =>
+      p.type === state.type &&
+      p.price >= state.min &&
+      p.price <= state.max
+    );
+  } else {
+    const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
+    const selectedSize = sizeMap[text];
+    state.selectedSize = selectedSize;
     
-  //   matchedProducts = enhancedProducts.filter(p =>
-  //     p.type === state.type &&
-  //     p.price >= state.min &&
-  //     p.price <= state.max &&
-  //     p.sizes.includes(selectedSize)
-  //   );
-  // }
-  // ✅ ALWAYS show shoes of ALL sizes
-state.selectedSize = "All Sizes";
-
-matchedProducts = enhancedProducts.filter(p =>
-  p.type === state.type &&
-  p.price >= state.min &&
-  p.price <= state.max
-);
-
+    matchedProducts = enhancedProducts.filter(p =>
+      p.type === state.type &&
+      p.price >= state.min &&
+      p.price <= state.max &&
+      p.sizes.includes(selectedSize)
+    );
+  }
 
   if (matchedProducts.length === 0) {
     await WhatsAppService.sendText(phone,
@@ -530,30 +521,27 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
       console.error(`Failed to send product ${product.name}:`, error.message);
       
       // Fallback to text
-     await WhatsAppService.sendText(
-  phone,
-  `🛒 *Ready to Order?*\n\n` +
-  `Select how you'd like to proceed:\n\n` +
-  `1️⃣ Store Pickup\n` +
-  `2️⃣ Home Delivery\n\n` +
-  `Reply with *1* or *2*`
-);
-
+      await WhatsAppService.sendText(phone,
+        `🛒 *Ready to Order?*\n\n` +
+        `Select how you'd like to proceed:\n\n` +
+        `1️⃣ Store Pickup\n` +
+        `2️⃣ Home Delivery\n\n` +
+        `Reply with *1* or *2*`
+      );
     }
   }
 
   // Ask for purchase method
-setTimeout(async () => {
-  await WhatsAppService.sendText(
-    phone,
-    `🛒 *Ready to Order?*\n\n` +
-    `Select how you'd like to proceed:\n\n` +
-    `1️⃣ Store Pickup\n` +
-    `2️⃣ Home Delivery\n\n` +
-    `Reply with *1* or *2*`
-  );
-}, 1000);
-
+  setTimeout(async () => {
+    await WhatsAppService.sendText(
+      phone,
+      `🛒 *Ready to Order?*\n\n` +
+      `Select how you'd like to proceed:\n\n` +
+      `1️⃣ Store Pickup\n` +
+      `2️⃣ Home Delivery\n\n` +
+      `Reply with *1* or *2*`
+    );
+  }, 1000);
 }
 
 async function handlePurchase(phone, text, state) {
@@ -566,7 +554,6 @@ async function handlePurchase(phone, text, state) {
     await WhatsAppService.sendText(phone,
       `🏪 *Store Pickup Selected*\n\n` +
       `📍 *Store Location:*\n` +
-      
       `Sarwan Shoes Store\n` +
       `123 Fashion Street, City Center\n` +
       `🕐 Open: 10AM - 9PM (Mon-Sat)\n\n` +
@@ -675,36 +662,28 @@ async function handleOrderConfirmation(phone, text, state) {
   const deliveryFee = state.purchaseMethod === "HOME_DELIVERY" && subtotal < 50 ? 5 : 0;
   const total = subtotal + deliveryFee;
 
-
   // Save order to MongoDB
-const orderData = new Order({
-  phone: phone,
+  const orderData = new Order({
+    phone: phone,
+    customerDetails: details,
+    purchaseMethod: state.purchaseMethod,
+    selectedShoes: state.selectedShoes.map(p => ({
+      productId: p.id,  
+      name: p.name,
+      price: p.price,
+      size: state.selectedSize || "Store Selection",
+      code: `SAR-${p.type.slice(0,3)}-${String(p.id).padStart(3, '0')}`,
+      imageUrl: p.imageUrl 
+    })),
+    pricing: {
+      subtotal: subtotal,
+      deliveryFee: deliveryFee,
+      total: total
+    }
+  });
 
-  customerDetails: details,
-
-  purchaseMethod: state.purchaseMethod,
-
-  selectedShoes: state.selectedShoes.map(p => ({
-    productId: p.id,  
-    name: p.name,
-    price: p.price,
-    size: state.selectedSize || "Store Selection",
-    code: `SAR-${p.type.slice(0,3)}-${String(p.id).padStart(3, '0')}`,
-    imageUrl: p.imageUrl 
-
-  })),
-
-  pricing: {
-    subtotal: subtotal,
-    deliveryFee: deliveryFee,
-    total: total
-  }
-});
-
-await orderData.save();
-console.log("🗄️ Order saved in MongoDB:", orderData._id);
-
-
+  await orderData.save();
+  console.log("🗄️ Order saved in MongoDB:", orderData._id);
   
   summary += `\n💰 *Payment Summary:*\n`;
   summary += `• Subtotal: $${subtotal.toFixed(2)}\n`;
