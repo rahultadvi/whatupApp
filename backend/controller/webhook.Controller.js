@@ -854,6 +854,8 @@ async function handleOrderConfirmation(phone, text, state) {
 
   // Prepare order data for database
 const orderData = {
+  orderId, 
+
   phone: phone,
   purchaseMethod: state.purchaseMethod,  
 
@@ -962,7 +964,7 @@ setInterval(() => {
 // ================= ORDER MANAGEMENT =================
 export const getOrders = async (req, res) => {
   try {
-    const orders = await Order.find().sort({ orderDate: -1 });
+    const orders = await Order.find().sort({ createdAt: -1 });
     res.status(200).json({
       success: true,
       count: orders.length,
