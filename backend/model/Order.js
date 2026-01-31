@@ -1,5 +1,18 @@
 import mongoose from "mongoose";
 
+const selectedShoeSchema = new mongoose.Schema(
+  {
+    id: Number,
+    name: String,
+    type: String,
+    price: Number,
+    size: String,
+    productCode: String,
+    imageUrl: String,
+  },
+  { _id: false }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     phone: { type: String, required: true },
@@ -18,17 +31,10 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
-    selectedShoes: [
-      {
-        id: Number,
-        name: String,
-        type: String,
-        price: Number,
-        size: String,
-        productCode: String,
-        imageUrl: String,
-      }
-    ],
+    selectedShoes: {
+      type: [selectedShoeSchema],
+      required: true,
+    },
 
     pricing: {
       subtotal: Number,
@@ -44,9 +50,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔥 FORCE CLEAR OLD MODEL
-if (mongoose.models.Order) {
-  delete mongoose.models.Order;
-}
+// 🔥 THIS is the REAL fix
+mongoose.models = {};
 
 export default mongoose.model("Order", orderSchema);
