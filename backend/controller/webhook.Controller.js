@@ -87,19 +87,28 @@ class WhatsAppService {
       }
     });
   }
-  static getSafeImage(product, index = 0) {
+static getSafeImage(product, index = 0) {
+  // 1️⃣ Agar product ke paas MULTIPLE images hain
   if (
     product.images &&
     Array.isArray(product.images) &&
-    product.images.length > 0
+    product.images.length > 1
   ) {
     return product.images[index % product.images.length];
   }
 
-  const fallback = CONFIG.CATEGORY_IMAGES[product.type] || [];
-  return fallback[index % fallback.length] ||
-    "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400";
+  // 2️⃣ Agar product ke paas sirf 1 image hai
+  // 👉 category images se rotate karo
+  const categoryImages = CONFIG.CATEGORY_IMAGES[product.type] || [];
+
+  if (categoryImages.length > 0) {
+    return categoryImages[index % categoryImages.length];
+  }
+
+  // 3️⃣ Final fallback
+  return "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400";
 }
+
 
 
   static async sendInteractiveButtons(to, message, buttons) {
