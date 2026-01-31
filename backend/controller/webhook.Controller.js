@@ -160,12 +160,15 @@ const enhanceProducts = () => {
     // Calculate discount
     const discount = product.price > 50 ? 10 : (product.price > 30 ? 5 : 0);
     const originalPrice = discount > 0 ? (product.price / (1 - discount/100)).toFixed(2) : null;
-    
-  return {
+return {
   ...product,
-  images: product.images && product.images.length > 0
-    ? product.images
-    : [imageUrl],
+
+  images: (
+    product.images && Array.isArray(product.images) && product.images.length >= 3
+  )
+    ? product.images.slice(0, 3)
+    : CONFIG.CATEGORY_IMAGES[product.type].slice(0, 3),
+
   colors: categoryColors[product.type],
   rating,
   features,
@@ -181,6 +184,7 @@ const enhanceProducts = () => {
       : "Synthetic Fabric",
   warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
 };
+
 
   });
   
@@ -260,6 +264,10 @@ if (endWords.includes(userText.toUpperCase())) {
     const state = userState.get(from);
     state.lastActivity = Date.now();
 
+
+    if (state.step === "WELCOME" && userText.toLowerCase() !== "start") {
+  return;
+}
     // ================= HANDLE MESSAGES =================
     switch (state.step) {
       case "WELCOME":
@@ -277,12 +285,6 @@ if (endWords.includes(userText.toUpperCase())) {
       case "SIZE":
         await handleSizeAndShowProducts(from, userText, state);
         break;
-
-          // 👇👇 YAHI ADD KARNA HAI
-  case "SELECT_SHOE":
-    await handleSelectShoe(from, userText, state);
-    break;
-
       case "PURCHASE":
         await handlePurchase(from, userText, state);
         break;
@@ -319,11 +321,11 @@ async function handleWelcome(phone, text, state) {
       `Reply with *1* or *2*`
     );
   } else {
-    await WhatsAppService.sendText(phone,
-      "👋 *Welcome to Sarwan Shoes Store!*\n\n" +
-      "Discover amazing shoes at great prices!\n\n" +
-      "Type *start* to begin shopping!"
-    );
+    // await WhatsAppService.sendText(phone,
+    //   "👋 *Welcome to Sarwan Shoes Store!*\n\n" +
+    //   "Discover amazing shoes at great prices!\n\n" +
+    //   "Type *start* to begin shopping!"
+    // );
   }
 }
 
@@ -535,21 +537,16 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3, '0')}
       `;
 
-      console.log(`📤 Sending image for ${product.name}: ${product.imageUrl}`);
+      console.log(`📤 Sending images for ${product.name}:`, product.images);
+
       
       // Send image with caption
    for (const img of product.images) {
-  // await WhatsAppService.sendImage(
-  //   phone,
-  //   img,
-  //   productMessage.trim()
-  // );
-await WhatsAppService.sendImage(
-  phone,
-  product.images[0], // 👈 ONLY FIRST IMAGE
-  `${index + 1}️⃣ ${productMessage.trim()}`
-);
-
+  await WhatsAppService.sendImage(
+    phone,
+    img,
+    productMessage.trim()
+  );
 
   // thoda delay (important)
   await new Promise(res => setTimeout(res, 1000));
@@ -573,86 +570,20 @@ await WhatsAppService.sendImage(
 
     }
   }
-  await WhatsAppService.sendText(
-  phone,
-  `🛒 *Select Shoe to Buy*\n\n` +
-  `Reply with:\n` +
-  `1️⃣ Shoe 1\n` +
-  `2️⃣ Shoe 2\n` +
-  `3️⃣ Shoe 3`
-);
-
-// next step
-state.step = "SELECT_SHOE";
-
 
   // Ask for purchase method
-// setTimeout(async () => {
-//   await WhatsAppService.sendText(
-//     phone,
-//     `🛒 *Ready to Order?*\n\n` +
-//     `Select how you'd like to proceed:\n\n` +
-//     `1️⃣ Store Pickup\n` +
-//     `2️⃣ Home Delivery\n\n` +
-//     `Reply with *1* or *2*`
-//   );
-// }, 1000);
-
-}
-
-async function handleSelectShoe(phone, text, state) {
-  const index = Number(text) - 1;
-
-  // validation
-  if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
-    await WhatsAppService.sendText(
-      phone,
-      "❌ Invalid selection.\nReply with 1️⃣, 2️⃣ or 3️⃣"
-    );
-    return;
-  }
-
-  const product = state.selectedShoes[index];
-  state.finalShoe = product; // save selected shoe
-
-  const productMessage = `
-${state.typeEmoji} *${product.name}*
-
-${product.description}
-
-💰 *Price:* $${product.price}${product.discount > 0 ? ` (${product.discount}% OFF)` : ''}
-${product.originalPrice ? `🎯 Was: $${product.originalPrice}\n` : ''}
-📏 *Sizes:* ${product.sizes.join(', ')}
-🎨 *Colors:* ${product.colors.join(', ')}
-⭐ *Rating:* ${product.rating}/5
-
-🔧 *Features:* ${product.features.join(', ')}
-🧵 *Material:* ${product.material}
-🛡️ *Warranty:* ${product.warranty}
-📦 *Delivery:* ${product.deliveryDays} days
-
-🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3, '0')}
-`;
-
-  // 👉 FULL CARD SEND (image + caption)
-  for (const img of product.images) {
-    await WhatsAppService.sendImage(phone, img, productMessage.trim());
-    await new Promise(res => setTimeout(res, 1000));
-  }
-
-  // move to purchase step
-  state.step = "PURCHASE";
-
-  // ask pickup / delivery
+setTimeout(async () => {
   await WhatsAppService.sendText(
     phone,
     `🛒 *Ready to Order?*\n\n` +
+    `Select how you'd like to proceed:\n\n` +
     `1️⃣ Store Pickup\n` +
     `2️⃣ Home Delivery\n\n` +
     `Reply with *1* or *2*`
   );
-}
+}, 1000);
 
+}
 
 async function handlePurchase(phone, text, state) {
   const response = text.toLowerCase();
@@ -788,7 +719,8 @@ const orderData = new Order({
     price: p.price,
     size: state.selectedSize || "Store Selection",
     code: `SAR-${p.type.slice(0,3)}-${String(p.id).padStart(3, '0')}`,
-    imageUrl: p.imageUrl 
+    imageUrl: p.images[0]
+    
 
   })),
 
