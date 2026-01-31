@@ -69,10 +69,8 @@ class WhatsAppService {
   }
 
   static async sendImage(to, imageUrl, caption = '') {
-    // Always use public URLs for WhatsApp
     let finalImageUrl = imageUrl;
-
-    // If image is localhost or not valid, use Unsplash
+    
     if (!imageUrl || !imageUrl.startsWith('https') || imageUrl.includes('localhost')) {
       console.warn('⚠️ Using fallback image for WhatsApp');
       finalImageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop";
@@ -113,18 +111,61 @@ class WhatsAppService {
       }
     });
   }
+
+  static async sendProductList(to, products) {
+    try {
+      // Create carousel-like experience with multiple messages
+      let currentIndex = 0;
+      const sendNextProduct = async () => {
+        if (currentIndex >= products.length) return;
+        
+        const product = products[currentIndex];
+        const productNumber = currentIndex + 1;
+        
+        const message = `*${productNumber}/${products.length}: ${product.name}*\n\n` +
+                       `💰 Price: $${product.price}\n` +
+                       `⭐ Rating: ${product.rating}/5\n` +
+                       `📏 Sizes: ${product.sizes.join(', ')}\n` +
+                       `${product.discount > 0 ? `🎯 Discount: ${product.discount}% OFF\n` : ''}` +
+                       `🔧 Features: ${product.features.slice(0, 2).join(', ')}\n\n` +
+                       `*Select this product by replying: ${productNumber}*`;
+        
+        await this.sendImage(to, product.images[0], message);
+        
+        currentIndex++;
+        if (currentIndex < products.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await sendNextProduct();
+        }
+      };
+      
+      await sendNextProduct();
+      
+      // Send selection instructions after all products
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      let selectionText = `*🎯 Select Your Product:*\n\n`;
+      products.forEach((product, index) => {
+        selectionText += `${index + 1}️⃣ *${product.name}* - $${product.price}\n`;
+      });
+      selectionText += `\nReply with the *number* of your choice (1, 2, or 3)`;
+      
+      return await this.sendText(to, selectionText);
+    } catch (error) {
+      console.error('❌ Error sending product list:', error);
+      throw error;
+    }
+  }
 }
 
 // ================= PRODUCTS DATA ENHANCEMENT =================
 const enhanceProducts = () => {
-  // Define colors for each category
   const categoryColors = {
     "SPORTS": ["Blue", "Red", "Black", "White", "Gray"],
     "CASUAL": ["Brown", "Beige", "Black", "White", "Navy"],
     "FORMAL": ["Black", "Brown", "Oxblood", "Tan", "Charcoal"]
   };
 
-  // Define features for each category
   const categoryFeatures = {
     "SPORTS": ["Lightweight", "Breathable", "Shock Absorption", "Flexible"],
     "CASUAL": ["Comfortable", "Stylish", "Versatile", "Durable"],
@@ -132,64 +173,39 @@ const enhanceProducts = () => {
   };
 
   const enhancedProducts = products.map(product => {
-    // ALWAYS use public images for WhatsApp
-    // Calculate which image to use based on product ID
-    const category = product.type;
-    const productIndex = (product.id - 1) % 3; // 0, 1, or 2 for each category
-
-    // Get image from Unsplash based on category
-    let imageUrl;
-    if (CONFIG.CATEGORY_IMAGES[category] && CONFIG.CATEGORY_IMAGES[category][productIndex]) {
-      imageUrl = CONFIG.CATEGORY_IMAGES[category][productIndex];
-    } else {
-      // Fallback image
-      imageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop";
-    }
-
-    console.log(`📸 Assigning image to ${product.name}: ${imageUrl}`);
+    // Assign images based on your products array
+    const productImages = product.images && Array.isArray(product.images) 
+      ? product.images 
+      : ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop"];
 
     // Generate rating
     let rating = 4.0;
     if (product.name.includes("Basic")) rating = 4.2;
-    if (product.name.includes("Pro")) rating = 4.5;
+    if (product.name.includes("Pro") || product.name.includes("Plus")) rating = 4.5;
     if (product.name.includes("Elite") || product.name.includes("Premium")) rating = 4.8;
-
-    // Add features
-    const features = categoryFeatures[product.type] || ["Comfortable", "Durable", "Stylish"];
 
     // Calculate discount
     const discount = product.price > 50 ? 10 : (product.price > 30 ? 5 : 0);
     const originalPrice = discount > 0 ? (product.price / (1 - discount / 100)).toFixed(2) : null;
+
     return {
       ...product,
-
-      images: (
-        product.images && Array.isArray(product.images) && product.images.length >= 3
-      )
-        ? product.images.slice(0, 3)
-        : CONFIG.CATEGORY_IMAGES[product.type].slice(0, 3),
-
-      colors: categoryColors[product.type],
+      images: productImages,
+      colors: categoryColors[product.type] || ["Black", "Brown", "Blue"],
       rating,
-      features,
+      features: categoryFeatures[product.type] || ["Comfortable", "Durable", "Stylish"],
       discount,
       originalPrice,
       inStock: true,
       deliveryDays: product.type === "FORMAL" ? 5 : 3,
-      material:
-        product.type === "FORMAL"
-          ? "Genuine Leather"
-          : product.type === "SPORTS"
-            ? "Breathable Mesh"
-            : "Synthetic Fabric",
-      warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
+      material: product.type === "FORMAL" ? "Genuine Leather" : 
+               product.type === "SPORTS" ? "Breathable Mesh" : "Synthetic Fabric",
+      warranty: product.type === "FORMAL" ? "1 Year" : "6 Months",
+      productCode: `SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}`
     };
-
-
   });
 
-  console.log(`✅ Enhanced ${enhancedProducts.length} products with PUBLIC images`);
-
+  console.log(`✅ Enhanced ${enhancedProducts.length} products`);
   return enhancedProducts;
 };
 
@@ -211,7 +227,6 @@ export const verifyWebhook = (req, res) => {
 
 // ================= MAIN MESSAGE HANDLER =================
 export const receiveMessage = async (req, res) => {
-  // Immediate response to WhatsApp
   res.sendStatus(200);
 
   try {
@@ -220,14 +235,14 @@ export const receiveMessage = async (req, res) => {
     const value = changes?.value;
     const messages = value?.messages;
 
-    if (!messages || messages.length === 0) {
-      return;
-    }
+    if (!messages || messages.length === 0) return;
 
     const message = messages[0];
     const from = message.from;
     const userText = message.text?.body?.trim() || "";
     const messageId = message.id;
+
+    console.log(`📨 Message from ${from}: "${userText}"`);
 
     // Duplicate message protection
     if (processedMessages.has(messageId)) {
@@ -236,39 +251,33 @@ export const receiveMessage = async (req, res) => {
     }
     processedMessages.add(messageId);
 
-
-    const endWords = ["END", "EXIT", "BYE", "CANCEL"];
-
+    // Handle exit commands
+    const endWords = ["END", "EXIT", "BYE", "CANCEL", "STOP"];
     if (endWords.includes(userText.toUpperCase())) {
       userState.delete(from);
-
       await WhatsAppService.sendText(
         from,
         "🛑 *Chat Ended Successfully*\n\n" +
         "Thank you for visiting *Sarwan Shoes Store* 👟\n\n" +
         "👉 To start again, type *start*"
       );
-
-      return; // ⛔ stop further execution
+      return;
     }
 
-
-    // Initialize user state
+    // Initialize or get user state
     if (!userState.has(from)) {
       userState.set(from, {
         step: "WELCOME",
-        lastActivity: Date.now()
+        lastActivity: Date.now(),
+        selectedProduct: null,
+        selectedProducts: []
       });
     }
 
     const state = userState.get(from);
     state.lastActivity = Date.now();
 
-
-    if (state.step === "WELCOME" && userText.toLowerCase() !== "start") {
-      return;
-    }
-    // ================= HANDLE MESSAGES =================
+    // Route to appropriate handler
     switch (state.step) {
       case "WELCOME":
         await handleWelcome(from, userText, state);
@@ -285,7 +294,7 @@ export const receiveMessage = async (req, res) => {
       case "SIZE":
         await handleSizeAndShowProducts(from, userText, state);
         break;
-      case "SELECT_PRODUCT": // 👈 YAHIN
+      case "SELECT_PRODUCT":
         await handleProductSelection(from, userText, state);
         break;
       case "PURCHASE":
@@ -295,16 +304,12 @@ export const receiveMessage = async (req, res) => {
         await handleOrderConfirmation(from, userText, state);
         break;
       default:
-        userState.set(from, {
-          step: "WELCOME",
-          lastActivity: Date.now()
-        });
+        userState.set(from, { step: "WELCOME", lastActivity: Date.now() });
         await WhatsAppService.sendText(from,
           "👋 Welcome to Sarwan Shoes Store! Type *start* to begin."
         );
     }
 
-    // Update state
     userState.set(from, state);
 
   } catch (error) {
@@ -316,7 +321,6 @@ export const receiveMessage = async (req, res) => {
 async function handleWelcome(phone, text, state) {
   if (text.toLowerCase() === 'start') {
     state.step = "LANG";
-
     await WhatsAppService.sendText(phone,
       `🌍 *Choose Your Language:*\n\n` +
       `1️⃣ English\n` +
@@ -324,11 +328,11 @@ async function handleWelcome(phone, text, state) {
       `Reply with *1* or *2*`
     );
   } else {
-    // await WhatsAppService.sendText(phone,
-    //   "👋 *Welcome to Sarwan Shoes Store!*\n\n" +
-    //   "Discover amazing shoes at great prices!\n\n" +
-    //   "Type *start* to begin shopping!"
-    // );
+    await WhatsAppService.sendText(phone,
+      "👋 *Welcome to Sarwan Shoes Store!*\n\n" +
+      "Discover amazing shoes at great prices!\n\n" +
+      "Type *start* to begin shopping!"
+    );
   }
 }
 
@@ -336,7 +340,6 @@ async function handleLanguage(phone, text, state) {
   if (text === '1') {
     state.step = "TYPE";
     state.language = "EN";
-
     await WhatsAppService.sendText(phone, "✅ English selected.");
     await WhatsAppService.sendText(phone,
       `📦 *Choose Shoe Category:*\n\n` +
@@ -348,7 +351,6 @@ async function handleLanguage(phone, text, state) {
   } else if (text === '2') {
     state.step = "TYPE";
     state.language = "AR";
-
     await WhatsAppService.sendText(phone, "✅ العربية محددة.");
     await WhatsAppService.sendText(phone,
       `📦 *اختر فئة الحذاء:*\n\n` +
@@ -384,9 +386,7 @@ async function handleShoeType(phone, text, state) {
       `${typeMap[text].emoji} *${typeMap[text].name} selected!*`
     );
 
-    // Show appropriate budget ranges
     let budgetOptions, budgetRanges;
-
     if (state.type === 'CASUAL') {
       budgetOptions = "1️⃣ $20 - $40 (Basic)\n2️⃣ $40 - $70 (Premium)\n3️⃣ $70+ (Luxury)";
       budgetRanges = {
@@ -401,7 +401,7 @@ async function handleShoeType(phone, text, state) {
         '2': { min: 50, max: 80, label: 'Professional' },
         '3': { min: 80, max: 100, label: 'Elite' }
       };
-    } else { // FORMAL
+    } else {
       budgetOptions = "1️⃣ $35 - $60 (Basic)\n2️⃣ $60 - $85 (Premium)\n3️⃣ $85+ (Luxury)";
       budgetRanges = {
         '1': { min: 35, max: 60, label: 'Basic' },
@@ -411,7 +411,6 @@ async function handleShoeType(phone, text, state) {
     }
 
     state.budgetRanges = budgetRanges;
-
     await WhatsAppService.sendText(phone,
       `💰 *Select Your Budget Range:*\n\n` +
       `${budgetOptions}\n\n` +
@@ -458,10 +457,8 @@ async function handleBudget(phone, text, state) {
   );
 }
 
-
 async function handleSizeAndShowProducts(phone, text, state) {
   const validOptions = ['1', '2', '3', '4', '5', '6'];
-
   if (!validOptions.includes(text)) {
     await WhatsAppService.sendText(phone,
       "❌ Invalid option. Please choose a valid size."
@@ -469,294 +466,147 @@ async function handleSizeAndShowProducts(phone, text, state) {
     return;
   }
 
-  // ✅ BETTER DEBUGGING
-  console.log(`🔍 ========== FILTERING DEBUG ==========`);
-  console.log(`User State:`);
-  console.log(`• Type: ${state.type} (${state.typeName})`);
-  console.log(`• Min Price: $${state.min}`);
-  console.log(`• Max Price: $${state.max}`);
-  console.log(`• Size Selection: ${text} (${text === '1' ? 'All sizes' : 'Size ' + text})`);
-  
-  // Show ALL products first for debugging
-  console.log(`📊 ALL ENHANCED PRODUCTS (${enhancedProducts.length}):`);
-  enhancedProducts.forEach(p => {
-    console.log(`• ${p.name}: Type=${p.type}, Price=$${p.price}, Sizes=${p.sizes}`);
-  });
+  // Determine selected size
+  let selectedSize = null;
+  if (text !== '1') {
+    const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
+    selectedSize = sizeMap[text];
+  }
+  state.selectedSize = selectedSize;
 
   // Filter products
-  let matchedProducts = [];
+  let matchedProducts = enhancedProducts.filter(p => {
+    if (p.type !== state.type) return false;
+    if (p.price < state.min || p.price > state.max) return false;
+    if (selectedSize && !p.sizes.includes(selectedSize)) return false;
+    return true;
+  });
 
-  if (text === '1') {
-    
-    // All sizes
-    matchedProducts = enhancedProducts.filter(p => {
-      const matches = p.type === state.type &&
-        p.price >= state.min &&
-        p.price <= state.max;
-      
-      if (matches) {
-        console.log(`✅ MATCH: ${p.name} - $${p.price} (${p.sizes})`);
-      }
-      return matches;
-    });
-  } else {
-    const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
-    const selectedSize = sizeMap[text];
-    state.selectedSize = selectedSize;
-
-    matchedProducts = enhancedProducts.filter(p => {
-      const matches = p.type === state.type &&
-        p.price >= state.min &&
-        p.price <= state.max &&
-        p.sizes.includes(selectedSize);
-      
-      if (matches) {
-        console.log(`✅ MATCH: ${p.name} - $${p.price} - Size ${selectedSize} in [${p.sizes}]`);
-      } else {
-        // Log why it didn't match
-        if (p.type !== state.type) {
-          console.log(`❌ TYPE MISMATCH: ${p.name} - Type: ${p.type} vs Needed: ${state.type}`);
-        } else if (p.price < state.min || p.price > state.max) {
-          console.log(`❌ PRICE MISMATCH: ${p.name} - $${p.price} not in range $${state.min}-$${state.max}`);
-        } else if (!p.sizes.includes(selectedSize)) {
-          console.log(`❌ SIZE MISMATCH: ${p.name} - Size ${selectedSize} not in [${p.sizes}]`);
-        }
-      }
-      return matches;
-    });
-  }
-
-  console.log(`🔍 Filter Results: Found ${matchedProducts.length} products`);
-  console.log(`=======================================`);
+  console.log(`🔍 Found ${matchedProducts.length} matching products for ${state.type}, size ${selectedSize || 'all'}, price $${state.min}-$${state.max}`);
 
   if (matchedProducts.length === 0) {
-    // ✅ EXTENDED DEBUG INFO FOR NO PRODUCTS
-    const allTypeProducts = enhancedProducts.filter(p => p.type === state.type);
-    console.log(`📊 All ${state.type} products:`, allTypeProducts.map(p => ({
-      name: p.name,
-      price: p.price,
-      sizes: p.sizes
-    })));
-    
     await WhatsAppService.sendText(phone,
       `😔 *No Shoes Found*\n\n` +
       `No shoes match:\n` +
       `• ${state.typeEmoji} ${state.typeName}\n` +
       `• 💰 $${state.min} - $${state.max}\n` +
-      `• 📏 Size: ${text === '1' ? 'All' : 'Size ' + state.selectedSize}\n\n` +
-      `Available ${state.type} shoes in database:\n` +
-      allTypeProducts.slice(0, 5).map(p => 
-        `• ${p.name} - $${p.price} (Sizes: ${p.sizes.join(',')})`
-      ).join('\n') +
-      `\n\nTry different options with *start*`
+      `• 📏 Size: ${selectedSize ? 'Size ' + selectedSize : 'All'}\n\n` +
+      `Try different options with *start*`
     );
-
     userState.delete(phone);
     return;
   }
 
-  // ✅ FIX: ALWAYS SHOW 3 PRODUCTS (USE ENHANCED PRODUCTS ARRAY)
-  const maxToShow = Math.min(CONFIG.MAX_PRODUCTS_TO_SHOW, matchedProducts.length);
-  state.selectedShoes = matchedProducts.slice(0, maxToShow);
+  // Limit to 3 products
+  const productsToShow = matchedProducts.slice(0, CONFIG.MAX_PRODUCTS_TO_SHOW);
+  state.selectedProducts = productsToShow;
   state.totalProductsFound = matchedProducts.length;
 
-  console.log(`✅ Showing ${state.selectedShoes.length} products:`);
-  state.selectedShoes.forEach((p, i) => {
-    console.log(`${i + 1}. ${p.name} - $${p.price} - Sizes: ${p.sizes}`);
-  });
+  // Show products with images (card-style)
+  await WhatsAppService.sendText(phone,
+    `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
+    `Now showing ${productsToShow.length} best options:\n` +
+    `(Each product will be shown with image)`
+  );
 
-  // ✅ IMPROVED PRODUCT DISPLAY
-  let productsList = `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n`;
-  productsList += `👟 *Available Options:*\n\n`;
+  // Send product cards one by one
+  await WhatsAppService.sendProductList(phone, productsToShow);
   
-  for (const [index, product] of state.selectedShoes.entries()) {
-    productsList += `${index + 1}️⃣ *${product.name}*\n`;
-    productsList += `   💰 Price: $${product.price}\n`;
-    productsList += `   ⭐ Rating: ${product.rating}/5\n`;
-    productsList += `   📏 Available Sizes: ${product.sizes.join(', ')}\n`;
-    
-    if (product.discount > 0) {
-      productsList += `   🎯 Discount: ${product.discount}% OFF\n`;
-    }
-    
-    // Highlight selected size
-    if (state.selectedSize) {
-      if (product.sizes.includes(state.selectedSize)) {
-        productsList += `   ✅ Your Size (${state.selectedSize}) Available\n`;
-      } else {
-        productsList += `   ⚠️ Size ${state.selectedSize} not available\n`;
-      }
-    }
-    
-    productsList += `   🆔 Code: SAR-${product.type.slice(0, 3)}-${String(product.id).padStart(3, '0')}\n\n`;
-  }
-
-  // ✅ FIXED SELECTION TEXT BASED ON AVAILABLE PRODUCTS
-  if (state.selectedShoes.length === 1) {
-    productsList += `*Select this shoe to view details:*\n`;
-    productsList += `Reply with *1*`;
-  } else if (state.selectedShoes.length === 2) {
-    productsList += `*Select a shoe to view details:*\n`;
-    productsList += `Reply with *1* or *2*`;
-  } else {
-    productsList += `*Select a shoe to view details:*\n`;
-    productsList += `Reply with *1*, *2*, or *3*`;
-  }
-
-  await WhatsAppService.sendText(phone, productsList);
-
-  // Move to product selection step
   state.step = "SELECT_PRODUCT";
-  
-  // Save state immediately
   userState.set(phone, state);
-  
-  // ✅ EXTENDED DEBUG
-  console.log(`📱 State saved for ${phone}:`, {
-    step: state.step,
-    selectedShoesCount: state.selectedShoes.length,
-    selectedShoes: state.selectedShoes.map(p => p.name),
-    selectedSize: state.selectedSize
-  });
 }
-// async function handleProductSelection(phone, text, state) {
-//   const index = parseInt(text) - 1;
-
-//   if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
-//     await WhatsAppService.sendText(phone, "❌ Please select a valid option.");
-//     return;
-//   }
-
-//   const product = state.selectedShoes[index];
-//   state.chosenProduct = product;
-
-//   const productMessage = `
-// 👟 *${product.name}*
-
-// ${product.description}
-
-// 💰 *Price:* $${product.price}
-// 📏 *Sizes:* ${product.sizes.join(', ')}
-// 🎨 *Colors:* ${product.colors.join(', ')}
-// ⭐ *Rating:* ${product.rating}/5
-
-// 🧵 *Material:* ${product.material}
-// 🛡️ *Warranty:* ${product.warranty}
-// 📦 *Delivery:* ${product.deliveryDays} days
-// ${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}
-
-// 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
-// `;
-
-//   // ✅ send ALL images of SELECTED product
-//   for (let i = 0; i < product.images.length; i++) {
-//     await WhatsAppService.sendImage(
-//       phone,
-//       product.images[i],
-//       i === 0 ? productMessage.trim() : ""
-//     );
-
-//     await new Promise(res => setTimeout(res, 800));
-//   }
-
-//   // next step
-//   state.step = "PURCHASE";
-
-//   await WhatsAppService.sendText(
-//     phone,
-//     `🛒 *Ready to Order?*\n\n` +
-//     `You selected: *${product.name}*\n\n` +
-//     `1️⃣ Store Pickup\n` +
-//     `2️⃣ Home Delivery\n\n` +
-//     `Reply with *1* or *2*`
-//   );
-// }
 
 async function handleProductSelection(phone, text, state) {
-  const index = parseInt(text) - 1;
+  const cleanedText = text.trim();
+  const index = parseInt(cleanedText) - 1;
 
-  if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
-    await WhatsAppService.sendText(phone, "❌ Please select a valid option.");
+  // Validate selection
+  if (isNaN(index) || index < 0 || index >= state.selectedProducts.length) {
+    // Show products again with selection instructions
+    let errorMsg = `❌ *Invalid Selection*\n\n`;
+    errorMsg += `Please select from available options:\n\n`;
+    
+    state.selectedProducts.forEach((product, idx) => {
+      errorMsg += `${idx + 1}️⃣ *${product.name}* - $${product.price}\n`;
+    });
+    
+    errorMsg += `\nReply with *1${state.selectedProducts.length > 1 ? `, 2${state.selectedProducts.length > 2 ? ', or 3' : ''}` : ''}*`;
+    
+    await WhatsAppService.sendText(phone, errorMsg);
     return;
   }
 
-  const product = state.selectedShoes[index];
-  state.chosenProduct = product;
+  // Valid selection
+  const selectedProduct = state.selectedProducts[index];
+  state.selectedProduct = selectedProduct;
+  state.step = "PURCHASE";
 
-  // Detailed product info
-  const productMessage = `
-👟 *${product.name}*
+  console.log(`✅ User selected: ${selectedProduct.name} ($${selectedProduct.price})`);
 
-${product.description}
+  // Show detailed product info
+  const details = `
+👟 *${selectedProduct.name}*
 
-💰 *Price:* $${product.price}${product.discount > 0 ? ` (${product.discount}% OFF)` : ''}
-${product.originalPrice ? `🎯 *Original Price:* $${product.originalPrice}\n` : ''}
-📏 *Available Sizes:* ${product.sizes.join(', ')}
-🎨 *Colors Available:* ${product.colors.join(', ')}
-⭐ *Rating:* ${product.rating}/5 ⭐⭐⭐⭐⭐
-📊 *${product.rating >= 4.5 ? 'BESTSELLER' : 'POPULAR CHOICE'}*
+${selectedProduct.description}
+
+💰 *Price:* $${selectedProduct.price}${selectedProduct.discount > 0 ? ` (${selectedProduct.discount}% OFF)` : ''}
+${selectedProduct.originalPrice ? `🎯 *Original Price:* $${selectedProduct.originalPrice}\n` : ''}
+📏 *Available Sizes:* ${selectedProduct.sizes.join(', ')}
+${state.selectedSize ? `✅ *Your Selected Size:* ${state.selectedSize}\n` : ''}
+🎨 *Colors:* ${selectedProduct.colors.join(', ')}
+⭐ *Rating:* ${selectedProduct.rating}/5 ⭐⭐⭐⭐⭐
+📊 *${selectedProduct.rating >= 4.5 ? 'BESTSELLER' : 'POPULAR CHOICE'}*
 
 🔧 *Key Features:*
-${product.features.map(f => `• ${f}`).join('\n')}
+${selectedProduct.features.map(f => `• ${f}`).join('\n')}
 
-🧵 *Material:* ${product.material}
-🛡️ *Warranty:* ${product.warranty}
-📦 *Delivery Time:* ${product.deliveryDays} business days
-${product.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock Available*'}
+🧵 *Material:* ${selectedProduct.material}
+🛡️ *Warranty:* ${selectedProduct.warranty}
+📦 *Delivery:* ${selectedProduct.deliveryDays} business days
+${selectedProduct.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock*'}
 
-🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
+🆔 *Product Code:* ${selectedProduct.productCode}
 `;
 
-  // ✅ FIX: SEND ONLY FIRST IMAGE
-  console.log(`📤 Sending MAIN image for ${product.name}:`, product.images[0]);
-  
+  // Send product image with details
   await WhatsAppService.sendImage(
     phone,
-    product.images[0], // ONLY FIRST IMAGE
-    productMessage.trim()
+    selectedProduct.images[0],
+    details.trim()
   );
 
   // Ask for purchase method
-  state.step = "PURCHASE";
-
-  // Small delay before purchase question
-  await new Promise(res => setTimeout(res, 1000));
-
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
   await WhatsAppService.sendText(
     phone,
-    `🛒 *Ready to Order ${product.name}?*\n\n` +
-    `Total Price: *$${product.price}*\n\n` +
-    `Choose your delivery method:\n\n` +
+    `🛒 *Ready to Order ${selectedProduct.name}?*\n\n` +
+    `Total: *$${selectedProduct.price}*\n\n` +
+    `Choose delivery method:\n\n` +
     `1️⃣ *Store Pickup*\n` +
-    `   📍 Collect from our store\n` +
-    `   🕐 Same day pickup available\n\n` +
+    `   📍 Collect from store\n` +
+    `   🕐 Same day available\n\n` +
     `2️⃣ *Home Delivery*\n` +
-    `   🚚 Delivered to your address\n` +
-    `   📦 ${product.deliveryDays} business days\n\n` +
+    `   🚚 Delivered to address\n` +
+    `   📦 ${selectedProduct.deliveryDays} business days\n\n` +
     `Reply with *1* or *2*`
   );
 }
 
-
-
 async function handlePurchase(phone, text, state) {
-  const response = text.toLowerCase();
-
-  if (response.includes('pickup') || response === 'btn1' || text === '1') {
+  if (text === '1') {
     state.purchaseMethod = "STORE_PICKUP";
     state.step = "ORDER_CONFIRM";
-
+    
     await WhatsAppService.sendText(phone,
       `🏪 *Store Pickup Selected*\n\n` +
-      `📍 *Store Location:*\n` +
-
-      `Sarwan Shoes Store\n` +
+      `📍 *Sarwan Shoes Store*\n` +
       `123 Fashion Street, City Center\n` +
-      `🕐 Open: 10AM - 9PM (Mon-Sat)\n\n` +
+      `🕐 10AM - 9PM (Mon-Sat)\n\n` +
       `Please provide:\n` +
-      `1️⃣ Full Name\n` +
-      `2️⃣ Phone Number\n` +
-      `3️⃣ Preferred Pickup Date\n\n` +
+      `• Full Name\n` +
+      `• Phone Number\n` +
+      `• Preferred Pickup Date\n\n` +
       `*Format:*\n` +
       `Name: Your Name\n` +
       `Phone: 1234567890\n` +
@@ -766,35 +616,30 @@ async function handlePurchase(phone, text, state) {
       `Phone: 9876543210\n` +
       `Date: 25/12/2024`
     );
-  } else if (response.includes('delivery') || response.includes('home') || response === 'btn2' || text === '2') {
+  } else if (text === '2') {
     state.purchaseMethod = "HOME_DELIVERY";
     state.step = "ORDER_CONFIRM";
-
+    
     await WhatsAppService.sendText(phone,
       `🚚 *Home Delivery Selected*\n\n` +
       `📦 *Delivery Info:*\n` +
       `• Free delivery over $50\n` +
       `• $5 charge for orders below $50\n` +
-      `• 3-5 business days\n\n` +
+      `• ${state.selectedProduct.deliveryDays} business days\n\n` +
       `Please provide:\n` +
-      `1️⃣ Full Name\n` +
-      `2️⃣ Delivery Address\n` +
-      `3️⃣ City & PIN Code\n` +
-      `4️⃣ Alternate Phone\n\n` +
+      `• Full Name\n` +
+      `• Delivery Address\n` +
+      `• City & PIN Code\n` +
+      `• Alternate Phone\n\n` +
       `*Format:*\n` +
       `Name: Your Name\n` +
       `Address: Complete Address\n` +
       `City: City Name, PIN\n` +
-      `Phone: 1234567890\n\n` +
-      `*Example:*\n` +
-      `Name: Ali Khan\n` +
-      `Address: 123 Main St, Apt 4B\n` +
-      `City: Mumbai, 400001\n` +
-      `Phone: 9876543210`
+      `Phone: 1234567890`
     );
   } else {
     await WhatsAppService.sendText(phone,
-      "❌ Please select an option:\n\n" +
+      "❌ Please select:\n\n" +
       "1️⃣ Store Pickup\n" +
       "2️⃣ Home Delivery"
     );
@@ -802,152 +647,182 @@ async function handlePurchase(phone, text, state) {
 }
 
 async function handleOrderConfirmation(phone, text, state) {
-  // Parse details
+  // Parse customer details
   const details = {};
-  text.split('\n').forEach(line => {
-    const parts = line.split(':');
-    if (parts.length >= 2) {
-      const key = parts[0].trim().toLowerCase();
-      const value = parts.slice(1).join(':').trim();
+  const lines = text.split('\n');
+  
+  lines.forEach(line => {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex > 0) {
+      const key = line.substring(0, colonIndex).trim().toLowerCase();
+      const value = line.substring(colonIndex + 1).trim();
       details[key] = value;
     }
   });
 
-  // Validate
-  const required = state.purchaseMethod === "STORE_PICKUP"
+  // Validate required fields
+  const requiredFields = state.purchaseMethod === "STORE_PICKUP"
     ? ['name', 'phone', 'date']
     : ['name', 'address', 'city', 'phone'];
-
-  const missing = required.filter(f => !details[f]);
-
+  
+  const missing = requiredFields.filter(field => !details[field]);
+  
   if (missing.length > 0) {
     await WhatsAppService.sendText(phone,
-      `❌ *Missing:* ${missing.join(', ')}\n\n` +
-      `Please send complete details.`
+      `❌ *Missing Information:*\n\n` +
+      `Please provide: ${missing.join(', ')}\n\n` +
+      `Send complete details in the requested format.`
     );
     return;
   }
 
-  // Generate order
+  // Generate order ID
   const orderId = `SAR-${Date.now().toString(36).toUpperCase().substr(-6)}`;
   const now = new Date();
 
-  let summary = `✅ *ORDER CONFIRMED!*\n\n`;
-  summary += `📋 *Order ID:* ${orderId}\n`;
-  summary += `📅 *Date:* ${now.toLocaleDateString()}\n`;
-  summary += `⏰ *Time:* ${now.toLocaleTimeString()}\n`;
-  summary += `📱 *Customer:* ${phone}\n\n`;
-
-  // Customer info
-  summary += `👤 *Customer Details:*\n`;
-  Object.entries(details).forEach(([key, value]) => {
-    summary += `• ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}\n`;
-  });
-
-  summary += `\n📦 *Order Summary:*\n`;
-
-  let subtotal = 0;
-  state.selectedShoes.forEach((p, i) => {
-    summary += `\n${i + 1}. ${p.name}\n`;
-    summary += `   Price: $${p.price}\n`;
-    summary += `   Size: ${state.selectedSize || 'Selected at store'}\n`;
-    summary += `   Code: SAR-${p.type.slice(0, 3)}-${String(p.id).padStart(3, '0')}\n`;
-    subtotal += p.price;
-  });
-
+  // Calculate delivery fee
+  const subtotal = state.selectedProduct.price;
   const deliveryFee = state.purchaseMethod === "HOME_DELIVERY" && subtotal < 50 ? 5 : 0;
   const total = subtotal + deliveryFee;
 
-
-  // Save order to MongoDB
-  const orderData = new Order({
+  // Prepare order data for database
+  const orderData = {
     phone: phone,
-
-    customerDetails: details,
-
-    purchaseMethod: state.purchaseMethod,
-
-    selectedShoes: state.selectedShoes.map(p => ({
-      productId: p.id,
-      name: p.name,
-      price: p.price,
-      size: state.selectedSize || "Store Selection",
-      code: `SAR-${p.type.slice(0, 3)}-${String(p.id).padStart(3, '0')}`,
-      imageUrl: p.images[0]
-
-
-    })),
-
+    orderId: orderId,
+    customerDetails: {
+      ...details,
+      purchaseMethod: state.purchaseMethod
+    },
+    product: {
+      id: state.selectedProduct.id,
+      name: state.selectedProduct.name,
+      type: state.selectedProduct.type,
+      price: state.selectedProduct.price,
+      size: state.selectedSize || "Not specified",
+      productCode: state.selectedProduct.productCode,
+      imageUrl: state.selectedProduct.images[0]
+    },
     pricing: {
       subtotal: subtotal,
       deliveryFee: deliveryFee,
       total: total
+    },
+    orderDate: now,
+    status: "pending"
+  };
+
+  try {
+    // Save to MongoDB
+    const order = new Order(orderData);
+    await order.save();
+    console.log(`✅ Order saved to MongoDB: ${orderId}`);
+
+    // Send confirmation to user
+    let confirmation = `✅ *ORDER CONFIRMED!*\n\n`;
+    confirmation += `📋 *Order ID:* ${orderId}\n`;
+    confirmation += `📅 *Date:* ${now.toLocaleDateString()}\n`;
+    confirmation += `⏰ *Time:* ${now.toLocaleTimeString()}\n\n`;
+    
+    confirmation += `👤 *Customer Details:*\n`;
+    Object.entries(details).forEach(([key, value]) => {
+      confirmation += `• ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}\n`;
+    });
+    
+    confirmation += `\n📦 *Order Summary:*\n`;
+    confirmation += `• Product: ${state.selectedProduct.name}\n`;
+    confirmation += `• Size: ${state.selectedSize || 'Select at store'}\n`;
+    confirmation += `• Price: $${subtotal.toFixed(2)}\n`;
+    if (deliveryFee > 0) confirmation += `• Delivery: $${deliveryFee.toFixed(2)}\n`;
+    confirmation += `• *Total: $${total.toFixed(2)}*\n`;
+    confirmation += `• Code: ${state.selectedProduct.productCode}\n\n`;
+    
+    if (state.purchaseMethod === "STORE_PICKUP") {
+      confirmation += `🏪 *Pickup Instructions:*\n`;
+      confirmation += `1. Visit store with Order ID\n`;
+      confirmation += `2. Bring ID proof\n`;
+      confirmation += `3. Pay at store\n`;
+      confirmation += `4. Collect your order\n\n`;
+      confirmation += `📍 *Store:* 123 Fashion Street\n`;
+      confirmation += `📞 *Call:* +91-1234567890\n`;
+    } else {
+      confirmation += `🚚 *Delivery Info:*\n`;
+      confirmation += `1. Processed within 24 hours\n`;
+      confirmation += `2. Delivery: 3-5 business days\n`;
+      confirmation += `3. Cash on Delivery\n`;
+      confirmation += `4. Keep exact change ready\n\n`;
+      confirmation += `📞 *Delivery Contact:* +91-9876543210\n`;
     }
-  });
+    
+    confirmation += `\n📧 *Confirmation sent to your phone*\n\n`;
+    confirmation += `🙏 *Thank you for shopping with Sarwan Shoes!*\n`;
+    confirmation += `Start new order: type *start*`;
 
-  await orderData.save();
-  console.log("🗄️ Order saved in MongoDB:", orderData._id);
+    await WhatsAppService.sendText(phone, confirmation);
 
+    // Clean up user state after delay
+    setTimeout(() => {
+      if (userState.has(phone)) {
+        userState.delete(phone);
+        console.log(`🧹 Cleared session for ${phone} after order`);
+      }
+    }, 30000);
 
-
-  summary += `\n💰 *Payment Summary:*\n`;
-  summary += `• Subtotal: $${subtotal.toFixed(2)}\n`;
-  if (deliveryFee > 0) summary += `• Delivery: $${deliveryFee.toFixed(2)}\n`;
-  summary += `• *Total: $${total.toFixed(2)}*\n\n`;
-
-  // Next steps
-  if (state.purchaseMethod === "STORE_PICKUP") {
-    summary += `🏪 *Pickup Instructions:*\n`;
-    summary += `1. Visit store with Order ID\n`;
-    summary += `2. Bring ID proof\n`;
-    summary += `3. Pay at store (Cash/Card)\n`;
-    summary += `4. Collect your order\n\n`;
-    summary += `📍 *Store:* 123 Fashion Street\n`;
-    summary += `📞 *Call:* +91-1234567890\n`;
-  } else {
-    summary += `🚚 *Delivery Info:*\n`;
-    summary += `1. Order will be processed in 24hrs\n`;
-    summary += `2. Delivery: 3-5 business days\n`;
-    summary += `3. Cash on Delivery\n`;
-    summary += `4. Keep exact change ready\n\n`;
-    summary += `📞 *Delivery Contact:* +91-9876543210\n`;
+  } catch (error) {
+    console.error('❌ Error saving order:', error);
+    await WhatsAppService.sendText(phone,
+      "❌ *Order Processing Error*\n\n" +
+      "There was an issue processing your order.\n" +
+      "Please try again or contact support.\n\n" +
+      "Type *start* to begin again."
+    );
   }
-
-  summary += `📧 *Confirmation email sent*\n\n`;
-  summary += `🙏 *Thank you for shopping with Sarwan Shoes!*\n`;
-  summary += `Start new order: send *start*`;
-
-  // Send confirmation
-  await WhatsAppService.sendText(phone, summary);
-
-  // Cleanup
-  setTimeout(() => userState.delete(phone), 10000);
 }
 
 // ================= SESSION CLEANUP =================
 setInterval(() => {
   const now = Date.now();
   for (const [phone, state] of userState.entries()) {
-    if (now - state.lastActivity > 30 * 60 * 1000) {
+    if (now - state.lastActivity > 30 * 60 * 1000) { // 30 minutes
       userState.delete(phone);
-      console.log(`🧹 Cleared session for ${phone}`);
+      console.log(`🧹 Cleared inactive session for ${phone}`);
     }
   }
-}, 30 * 60 * 1000);
+}, 5 * 60 * 1000); // Check every 5 minutes
 
-// Get all orders for frontend / admin panel
+// ================= ORDER MANAGEMENT =================
 export const getOrders = async (req, res) => {
   try {
-    const orders = await Order.find().sort({ createdAt: -1 });
+    const orders = await Order.find().sort({ orderDate: -1 });
     res.status(200).json({
       success: true,
-      total: orders.length,
+      count: orders.length,
       data: orders
     });
-  } catch (err) {
+  } catch (error) {
     res.status(500).json({
       success: false,
-      error: err.message
+      error: error.message
+    });
+  }
+};
+
+export const getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findOne({ orderId: req.params.id });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+    res.status(200).json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 };
