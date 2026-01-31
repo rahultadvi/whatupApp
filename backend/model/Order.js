@@ -18,15 +18,18 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
-    product: {
-      id: Number,
-      name: String,
-      type: String,
-      price: Number,
-      size: String,
-      productCode: String,
-      imageUrl: String,
-    },
+    // ✅ USE THIS (array of shoes)
+    selectedShoes: [
+      {
+        id: Number,
+        name: String,
+        type: String,
+        price: Number,
+        size: String,
+        productCode: String,
+        imageUrl: String,
+      }
+    ],
 
     pricing: {
       subtotal: Number,
@@ -36,17 +39,12 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      default: "pending",
+      default: "CONFIRMED",
     },
   },
-  {
-    timestamps: true,
-    strict: false,
-  }
+  { timestamps: true }
 );
 
-// 🔥 THIS LINE FIXES THE ERROR
-const Order =
-  mongoose.models.Order || mongoose.model("Order", orderSchema);
-
-export default Order;
+// important
+export default mongoose.models.Order ||
+  mongoose.model("Order", orderSchema);
