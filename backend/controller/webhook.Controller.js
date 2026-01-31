@@ -87,6 +87,20 @@ class WhatsAppService {
       }
     });
   }
+  static getSafeImage(product, index = 0) {
+  if (
+    product.images &&
+    Array.isArray(product.images) &&
+    product.images.length > 0
+  ) {
+    return product.images[index % product.images.length];
+  }
+
+  const fallback = CONFIG.CATEGORY_IMAGES[product.type] || [];
+  return fallback[index % fallback.length] ||
+    "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400";
+}
+
 
   static async sendInteractiveButtons(to, message, buttons) {
     return this.sendMessage(to, {
@@ -130,7 +144,9 @@ class WhatsAppService {
         const cardCaption = this.formatProductCard(product, productNumber, totalProducts);
         
         // Send image with card caption
-        await this.sendImage(to, product.images[0], cardCaption);
+        const imageUrl = WhatsAppService.getSafeImage(product, i);
+await this.sendImage(to, imageUrl, cardCaption);
+
         
         // Add small delay between cards
         if (i < products.length - 1) {
@@ -217,7 +233,9 @@ static formatProductCard(product, current, total) {
                    `${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}\n\n` +
                    `🆔 Product Code: ${product.productCode}`;
     
-    return await this.sendImage(to, product.images[0], details);
+    const imageUrl = WhatsAppService.getSafeImage(product, 0);
+return await this.sendImage(to, imageUrl, details);
+
   }
 }
 
@@ -235,10 +253,19 @@ const enhanceProducts = () => {
     "FORMAL": ["Elegant", "Premium Leather", "Polished Finish", "Classic Design"]
   };
 
-  const enhancedProducts = products.map(product => {
-    const productImages = product.images && Array.isArray(product.images) 
-      ? product.images 
-      : ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop"];
+  const enhancedProducts = products.map((product, index) => {
+
+   const fallbackImages = CONFIG.CATEGORY_IMAGES[product.type] || [];
+
+const productImages =
+  product.images &&
+  Array.isArray(product.images) &&
+  product.images.length > 0
+    ? product.images
+    : fallbackImages.length > 0
+      ? [fallbackImages[index % fallbackImages.length]]
+      : ["https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400"];
+
 
     let rating = 4.0;
     if (product.name.includes("Basic")) rating = 4.2;
@@ -585,7 +612,9 @@ async function handleSizeAndShowProducts(phone, text, state) {
       const cardCaption = WhatsAppService.formatProductCard(product, productNumber, totalProducts);
       
       // Send image with card caption
-      await WhatsAppService.sendImage(phone, product.images[0], cardCaption);
+      const imageUrl = WhatsAppService.getSafeImage(product, i);
+await WhatsAppService.sendImage(phone, imageUrl, cardCaption);
+
       
       // Add delay between cards for better user experience
       if (i < productsToShow.length - 1) {
@@ -779,7 +808,8 @@ async function handleOrderConfirmation(phone, text, state) {
       price: state.selectedProduct.price,
       size: state.selectedSize || "Not specified",
       productCode: state.selectedProduct.productCode,
-      imageUrl: state.selectedProduct.images[0]
+      imageUrl: WhatsAppService.getSafeImage(state.selectedProduct, 0)
+
     },
     pricing: {
       subtotal: subtotal,
