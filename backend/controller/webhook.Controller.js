@@ -116,28 +116,424 @@ class WhatsAppService {
     try {
       // Create carousel-like experience with multiple messages
       let currentIndex = 0;
-      const sendNextProduct = async () => {
-        if (currentIndex >= products.length) return;
-        
-        const product = products[currentIndex];
-        const productNumber = currentIndex + 1;
-        
-        const message = `*${productNumber}/${products.length}: ${product.name}*\n\n` +
-                       `💰 Price: $${product.price}\n` +
-                       `⭐ Rating: ${product.rating}/5\n` +
-                       `📏 Sizes: ${product.sizes.join(', ')}\n` +
-                       `${product.discount > 0 ? `🎯 Discount: ${product.discount}% OFF\n` : ''}` +
-                       `🔧 Features: ${product.features.slice(0, 2).join(', ')}\n\n` +
-                       `*Select this product by replying: ${productNumber}*`;
-        
-        await this.sendImage(to, product.images[0], message);
-        
-        currentIndex++;
-        if (currentIndex < products.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          await sendNextProduct();
-        }
+   class ProductSender {
+  constructor(config = {}) {
+    this.products = [];
+    this.currentIndex = 0;
+    this.isSending = false;
+    this.userSelections = new Map();
+    this.config = {
+      delayBetweenProducts: 500,
+      maxFeaturesToShow: 2,
+      imagesPerProduct: 3,
+      paginationSize: 5,
+      ...config
+    };
+  }
+
+  /**
+   * Initialize product sender with products
+   * @param {Array} products - Array of product objects
+   */
+  initialize(products) {
+    this.products = this._validateProducts(products);
+    this.currentIndex = 0;
+    this.isSending = false;
+    return this;
+  }
+
+  /**
+   * Send products interactively with pagination
+   * @param {string} userId - User identifier
+   * @param {Object} options - Sending options
+   * @returns {Object} - Result with status and metadata
+   */
+  async sendProducts(userId, options = {}) {
+    if (this.isSending) {
+      throw new Error('Already sending products to this user');
+    }
+
+    if (!this.products.length) {
+      throw new Error('No products to send');
+    }
+
+    this.isSending = true;
+    const startTime = Date.now();
+
+    try {
+      const { paginationSize = this.config.paginationSize } = options;
+      const endIndex = Math.min(this.currentIndex + paginationSize, this.products.length);
+
+      // Send products in batch with controlled concurrency
+      await this._sendProductBatch(userId, this.currentIndex, endIndex);
+
+      // Update index and check if more products exist
+      this.currentIndex = endIndex;
+      const hasMore = endIndex < this.products.length;
+
+      // Send interactive options
+      await this._sendInteractiveOptions(userId, hasMore);
+
+      return {
+        success: true,
+        sentCount: endIndex - options.startIndex || 0,
+        totalSent: endIndex,
+        hasMore,
+        duration: Date.now() - startTime
       };
+    } catch (error) {
+      this.isSending = false;
+      console.error('Error sending products:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send a batch of products with controlled concurrency
+   */
+  async _sendProductBatch(userId, start, end) {
+    const batch = this.products.slice(start, end);
+    
+    // Use concurrency control to avoid overwhelming the system
+    const concurrencyLimit = 3;
+    const chunks = this._chunkArray(batch, concurrencyLimit);
+
+    for (const chunk of chunks) {
+      await Promise.all(
+        chunk.map((product, index) => 
+          this._sendSingleProduct(userId, product, start + index)
+        )
+      );
+      
+      if (chunks.indexOf(chunk) < chunks.length - 1) {
+        await this._delay(this.config.delayBetweenProducts * 2);
+      }
+    }
+  }
+
+  /**
+   * Send a single product with retry logic
+   */
+  async _sendSingleProduct(userId, product, productIndex) {
+    const maxRetries = 3;
+    let retries = 0;
+
+    while (retries <= maxRetries) {
+      try {
+        const productNumber = productIndex + 1;
+        const message = this._createProductMessage(product, productNumber);
+        
+        // Send main image
+        await this._sendImage(userId, product.images[0], message);
+
+        // If product has multiple images, send additional ones
+        if (product.images.length > 1 && this.config.imagesPerProduct > 1) {
+          await this._sendAdditionalImages(userId, product);
+        }
+
+        return;
+      } catch (error) {
+        retries++;
+        if (retries > maxRetries) {
+          console.error(`Failed to send product ${product.id} after ${maxRetries} attempts`);
+          throw error;
+        }
+        await this._delay(1000 * retries); // Exponential backoff
+      }
+    }
+  }
+
+  /**
+   * Create formatted product message
+   */
+  _createProductMessage(product, productNumber) {
+    const features = product.features
+      .slice(0, this.config.maxFeaturesToShow)
+      .map(feat => `• ${feat}`)
+      .join('\n');
+
+    const discountBadge = product.discount > 0 
+      ? `🎯 *${product.discount}% OFF*\n`
+      : '';
+
+    const ratingStars = '⭐'.repeat(Math.floor(product.rating)) + 
+                       (product.rating % 1 >= 0.5 ? '½' : '');
+
+    return `
+📦 *PRODUCT ${productNumber}/${this.products.length}*
+
+*${product.name}*
+
+💰 *Price:* $${product.price} ${product.originalPrice ? `~~$${product.originalPrice}~~` : ''}
+${discountBadge}${ratingStars} *${product.rating}/5* (${product.reviewCount || 0} reviews)
+
+📏 *Available Sizes:* ${product.sizes.join(', ')}
+
+🔧 *Key Features:*
+${features}
+
+${product.description ? `\n📝 *Description:*\n${product.description.substring(0, 150)}...\n` : ''}
+
+👉 *Select this product: Reply with* \`${productNumber}\`
+   *View details: Reply with* \`D${productNumber}\`
+   *Save for later: Reply with* \`S${productNumber}\`
+    `;
+  }
+
+  /**
+   * Send additional product images
+   */
+  async _sendAdditionalImages(userId, product) {
+    const additionalImages = product.images.slice(1, this.config.imagesPerProduct);
+    
+    for (const image of additionalImages) {
+      await this._delay(300);
+      await this._sendImage(userId, image, `More views of ${product.name}`);
+    }
+  }
+
+  /**
+   * Send interactive options after products
+   */
+  async _sendInteractiveOptions(userId, hasMore) {
+    const options = [
+      "🔢 *Select product number* (e.g., '1')",
+      "📋 *View all selections* (Type 'CART')",
+      "❌ *Clear selections* (Type 'CLEAR')",
+      "🔍 *Search products* (Type 'SEARCH [keyword]')",
+      "💬 *Help* (Type 'HELP')"
+    ];
+
+    if (hasMore) {
+      options.unshift("➡️ *Show next 5 products* (Type 'NEXT')");
+    }
+
+    if (this.currentIndex > this.config.paginationSize) {
+      options.push("⬅️ *Show previous* (Type 'PREV')");
+    }
+
+    const message = `
+*━━━━━━━━━━━━━━━━*
+🎯 *INTERACTIVE OPTIONS*
+
+${options.join('\n')}
+
+*━━━━━━━━━━━━━━━━*
+📊 *Progress:* ${this.currentIndex}/${this.products.length} products shown
+🛒 *Your selections:* ${this.userSelections.get(userId)?.length || 0} items
+    `;
+
+    await this._sendMessage(userId, message);
+  }
+
+  /**
+   * Handle user response
+   */
+  async handleUserResponse(userId, response) {
+    response = response.trim().toUpperCase();
+
+    const handlers = {
+      NEXT: () => this.sendProducts(userId),
+      PREV: () => this._showPrevious(userId),
+      CART: () => this._showSelections(userId),
+      CLEAR: () => this._clearSelections(userId),
+      HELP: () => this._sendHelp(userId),
+      SEARCH: (query) => this._searchProducts(userId, query)
+    };
+
+    // Check for product selection (e.g., "1", "D1", "S1")
+    if (/^\d+$/.test(response) || /^[DS]\d+$/i.test(response)) {
+      return this._handleProductAction(userId, response);
+    }
+
+    // Check for commands
+    const [command, ...args] = response.split(' ');
+    if (handlers[command]) {
+      return handlers[command](args.join(' '));
+    }
+
+    // Default response for unknown input
+    await this._sendMessage(userId, 
+      "❌ Invalid option. Please choose from the options above or type HELP for assistance."
+    );
+  }
+
+  /**
+   * Handle product-related actions
+   */
+  async _handleProductAction(userId, response) {
+    const action = response.charAt(0);
+    const productNumber = parseInt(action.match(/\d/) ? response : response.substring(1));
+    
+    if (productNumber < 1 || productNumber > this.products.length) {
+      await this._sendMessage(userId, `❌ Invalid product number. Please select between 1-${this.products.length}`);
+      return;
+    }
+
+    const product = this.products[productNumber - 1];
+    
+    switch(action.toUpperCase()) {
+      case 'D':
+        await this._showProductDetails(userId, product, productNumber);
+        break;
+      case 'S':
+        await this._saveForLater(userId, product, productNumber);
+        break;
+      default:
+        await this._selectProduct(userId, product, productNumber);
+    }
+  }
+
+  /**
+   * Select a product
+   */
+  async _selectProduct(userId, product, productNumber) {
+    if (!this.userSelections.has(userId)) {
+      this.userSelections.set(userId, []);
+    }
+
+    const userCart = this.userSelections.get(userId);
+    
+    if (!userCart.find(item => item.id === product.id)) {
+      userCart.push({
+        ...product,
+        selectedAt: new Date(),
+        selectedNumber: productNumber
+      });
+
+      await this._sendMessage(userId, 
+        `✅ Added to selections: *${product.name}*\n` +
+        `🛒 Your cart now has ${userCart.length} items\n` +
+        `💬 Reply with 'CART' to view all selections`
+      );
+    } else {
+      await this._sendMessage(userId, 
+        `ℹ️ *${product.name}* is already in your selections`
+      );
+    }
+  }
+
+  /**
+   * Show product details
+   */
+  async _showProductDetails(userId, product, productNumber) {
+    const detailsMessage = `
+📋 *DETAILED VIEW - ${product.name}*
+
+${product.description || 'No description available'}
+
+📊 *Specifications:*
+${product.specifications ? Object.entries(product.specifications)
+  .map(([key, value]) => `• *${key}:* ${value}`)
+  .join('\n') : 'No specifications available'}
+
+🌟 *All Features:*
+${product.features.map(feat => `• ${feat}`).join('\n')}
+
+🖼️ *Images:* ${product.images.length} available
+
+🛒 *To select this product, reply:* ${productNumber}
+📌 *To save for later, reply:* S${productNumber}
+    `;
+
+    await this._sendMessage(userId, detailsMessage);
+  }
+
+  /**
+   * Show user's selections
+   */
+  async _showSelections(userId) {
+    const userCart = this.userSelections.get(userId) || [];
+    
+    if (!userCart.length) {
+      await this._sendMessage(userId, "🛒 Your selections are empty");
+      return;
+    }
+
+    let total = 0;
+    const cartItems = userCart.map((item, index) => {
+      total += item.price;
+      return `${index + 1}. *${item.name}* - $${item.price}`;
+    }).join('\n');
+
+    const message = `
+🛒 *YOUR SELECTIONS* (${userCart.length} items)
+
+${cartItems}
+
+*━━━━━━━━━━━━━━━━*
+💰 *Total:* $${total.toFixed(2)}
+
+💬 *Commands:*
+• Remove item: Type 'REMOVE [number]'
+• Checkout: Type 'CHECKOUT'
+• Continue browsing: Type 'NEXT'
+    `;
+
+    await this._sendMessage(userId, message);
+  }
+
+  /**
+   * Utility methods
+   */
+  _chunkArray(array, size) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+      chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+  }
+
+  _delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  _validateProducts(products) {
+    return products.filter(product => 
+      product.name && 
+      product.price && 
+      product.images && 
+      product.images.length > 0
+    );
+  }
+
+  // Mock methods - implement based on your actual messaging system
+  async _sendImage(userId, imageUrl, caption) {
+    // Implement your image sending logic
+    console.log(`Sending image to ${userId}:`, { imageUrl, caption });
+  }
+
+  async _sendMessage(userId, message) {
+    // Implement your message sending logic
+    console.log(`Sending message to ${userId}:`, message);
+  }
+
+  // Additional handlers (simplified for brevity)
+  async _showPrevious(userId) { /* ... */ }
+  async _clearSelections(userId) { /* ... */ }
+  async _sendHelp(userId) { /* ... */ }
+  async _searchProducts(userId, query) { /* ... */ }
+  async _saveForLater(userId, product, productNumber) { /* ... */ }
+}
+
+// Usage example:
+const productSender = new ProductSender({
+  delayBetweenProducts: 500,
+  maxFeaturesToShow: 3,
+  imagesPerProduct: 2,
+  paginationSize: 5
+});
+
+// Initialize with products
+productSender.initialize(productsArray);
+
+// Send first batch
+await productSender.sendProducts('user123');
+
+// Handle user responses
+await productSender.handleUserResponse('user123', '1'); // Select product 1
+await productSender.handleUserResponse('user123', 'NEXT'); // Show next batch
+await productSender.handleUserResponse('user123', 'CART'); // View cart
       
       await sendNextProduct();
       
