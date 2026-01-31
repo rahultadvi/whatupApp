@@ -514,12 +514,18 @@ async function handleSizeAndShowProducts(phone, text, state) {
   //   `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
   //   `Here are the best ${Math.min(3, matchedProducts.length)} options:`
   // );
-  const shownCount = state.selectedShoes.length;
+const imageCount = state.selectedShoes.reduce(
+  (sum, p) => sum + (p.images?.length || 0),
+  0
+);
 
-  await WhatsAppService.sendText(phone,
-    `🎉 *Found ${shownCount} matching shoes!*\n\n` +
-    `Here are the best ${shownCount} options:`
-  );
+
+await WhatsAppService.sendText(
+  phone,
+  `🎉 *Found ${imageCount} shoe images!*\n\n` +
+  `Here are the best options:`
+);
+
 
 
   // Send each product
@@ -582,33 +588,21 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
 
     }
   }
-
-        // 👇👇 YAHIN ADD KARO (loop ke baad)
-      await WhatsAppService.sendText(
-        phone,
-        `👟 *Which shoe do you like?*\n\n` +
-        state.selectedShoes
-          .map((p, i) => `${i + 1}️⃣ ${p.name}`)
-          .join('\n') +
-        `\n\nReply with *1*, *2*, or *3*`
-      );
-
-      // next step set karo
-      state.step = "SELECT_PRODUCT";
+  
 
   // Ask for purchase method
 
   
-  setTimeout(async () => {
-    await WhatsAppService.sendText(
-      phone,
-      `🛒 *Ready to Order?*\n\n` +
-      `Select how you'd like to proceed:\n\n` +
-      `1️⃣ Store Pickup\n` +
-      `2️⃣ Home Delivery\n\n` +
-      `Reply with *1* or *2*`
-    );
-  }, 1000);
+  // setTimeout(async () => {
+  //   await WhatsAppService.sendText(
+  //     phone,
+  //     `🛒 *Ready to Order?*\n\n` +
+  //     `Select how you'd like to proceed:\n\n` +
+  //     `1️⃣ Store Pickup\n` +
+  //     `2️⃣ Home Delivery\n\n` +
+  //     `Reply with *1* or *2*`
+  //   );
+  // }, 1000);
 
 }
 
@@ -627,21 +621,52 @@ async function handleProductSelection(phone, text, state) {
     return;
   }
 
-  // Selected product save karo
-  state.chosenProduct = state.selectedShoes[index];
+  // ✅ Selected product
+  const product = state.selectedShoes[index];
+  state.chosenProduct = product;
 
-  // Ab Ready to Order dikhao
+  // ✅ Single product showcase message
+  const productMessage = `
+👟 *${product.name}*
+
+${product.description}
+
+💰 *Price:* $${product.price}${product.discount ? ` (${product.discount}% OFF)` : ''}
+📏 *Sizes:* ${product.sizes.join(', ')}
+🎨 *Colors:* ${product.colors.join(', ')}
+⭐ *Rating:* ${product.rating}/5
+
+🧵 *Material:* ${product.material}
+🛡️ *Warranty:* ${product.warranty}
+📦 *Delivery:* ${product.deliveryDays} days
+${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}
+
+🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
+`;
+
+  // ✅ Send ONLY ONE image (hero image)
+  await WhatsAppService.sendImage(
+    phone,
+    product.images[0],
+    productMessage.trim()
+  );
+
+  // small delay
+  await new Promise(res => setTimeout(res, 1200));
+
+  // ✅ NOW ask for order
   state.step = "PURCHASE";
 
   await WhatsAppService.sendText(
     phone,
     `🛒 *Ready to Order?*\n\n` +
-    `You selected: *${state.chosenProduct.name}*\n\n` +
+    `You selected: *${product.name}*\n\n` +
     `1️⃣ Store Pickup\n` +
     `2️⃣ Home Delivery\n\n` +
     `Reply with *1* or *2*`
   );
 }
+
 
 
 async function handlePurchase(phone, text, state) {
