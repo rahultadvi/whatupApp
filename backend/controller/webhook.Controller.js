@@ -589,6 +589,17 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
     }
   }
   
+  await WhatsAppService.sendText(
+  phone,
+  `👟 *Available Shoes:*\n\n` +
+  state.selectedShoes
+    .map((p, i) => `${i + 1}️⃣ ${p.name} — $${p.price}`)
+    .join('\n') +
+  `\n\nReply with *1*, *2*, or *3*`
+);
+
+// 🔑 VERY IMPORTANT
+state.step = "SELECT_PRODUCT";
 
   // Ask for purchase method
 
@@ -609,29 +620,20 @@ ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
 async function handleProductSelection(phone, text, state) {
   const index = parseInt(text) - 1;
 
-  if (
-    isNaN(index) ||
-    index < 0 ||
-    index >= state.selectedShoes.length
-  ) {
-    await WhatsAppService.sendText(
-      phone,
-      "❌ Please select a valid shoe number."
-    );
+  if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
+    await WhatsAppService.sendText(phone, "❌ Please select a valid option.");
     return;
   }
 
-  // ✅ Selected product
   const product = state.selectedShoes[index];
   state.chosenProduct = product;
 
-  // ✅ Single product showcase message
   const productMessage = `
 👟 *${product.name}*
 
 ${product.description}
 
-💰 *Price:* $${product.price}${product.discount ? ` (${product.discount}% OFF)` : ''}
+💰 *Price:* $${product.price}
 📏 *Sizes:* ${product.sizes.join(', ')}
 🎨 *Colors:* ${product.colors.join(', ')}
 ⭐ *Rating:* ${product.rating}/5
@@ -644,17 +646,18 @@ ${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}
 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
 `;
 
-  // ✅ Send ONLY ONE image (hero image)
-  await WhatsAppService.sendImage(
-    phone,
-    product.images[0],
-    productMessage.trim()
-  );
+  // ✅ send ALL images of SELECTED product
+  for (let i = 0; i < product.images.length; i++) {
+    await WhatsAppService.sendImage(
+      phone,
+      product.images[i],
+      i === 0 ? productMessage.trim() : ""
+    );
 
-  // small delay
-  await new Promise(res => setTimeout(res, 1200));
+    await new Promise(res => setTimeout(res, 800));
+  }
 
-  // ✅ NOW ask for order
+  // next step
   state.step = "PURCHASE";
 
   await WhatsAppService.sendText(
@@ -666,6 +669,7 @@ ${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}
     `Reply with *1* or *2*`
   );
 }
+
 
 
 
