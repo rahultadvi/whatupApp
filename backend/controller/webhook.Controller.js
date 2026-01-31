@@ -132,30 +132,21 @@ const enhanceProducts = () => {
   };
 
   const enhancedProducts = products.map(product => {
+    // ALWAYS use public images for WhatsApp
+    // Calculate which image to use based on product ID
     const category = product.type;
-    
-    // ✅ FIX 1: Ensure images array exists
-    let imagesArray = [];
-    
-    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-      // Use product's own images if available
-      imagesArray = product.images.slice(0, 3);
-    } else if (CONFIG.CATEGORY_IMAGES[category]) {
-      // Use category images
-      imagesArray = CONFIG.CATEGORY_IMAGES[category].slice(0, 3);
+    const productIndex = (product.id - 1) % 3; // 0, 1, or 2 for each category
+
+    // Get image from Unsplash based on category
+    let imageUrl;
+    if (CONFIG.CATEGORY_IMAGES[category] && CONFIG.CATEGORY_IMAGES[category][productIndex]) {
+      imageUrl = CONFIG.CATEGORY_IMAGES[category][productIndex];
     } else {
-      // Fallback
-      imagesArray = [
-        "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&auto=format&fit=crop"
-      ];
+      // Fallback image
+      imageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop";
     }
 
-    // ✅ FIX 2: Ensure we have exactly 3 images
-    while (imagesArray.length < 3) {
-      imagesArray.push(imagesArray[0] || "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop");
-    }
+    console.log(`📸 Assigning image to ${product.name}: ${imageUrl}`);
 
     // Generate rating
     let rating = 4.0;
@@ -164,100 +155,45 @@ const enhanceProducts = () => {
     if (product.name.includes("Elite") || product.name.includes("Premium")) rating = 4.8;
 
     // Add features
-    const features = categoryFeatures[category] || ["Comfortable", "Durable", "Stylish"];
+    const features = categoryFeatures[product.type] || ["Comfortable", "Durable", "Stylish"];
 
     // Calculate discount
     const discount = product.price > 50 ? 10 : (product.price > 30 ? 5 : 0);
     const originalPrice = discount > 0 ? (product.price / (1 - discount / 100)).toFixed(2) : null;
-    
     return {
       ...product,
-      images: imagesArray, // ✅ FIXED: Always 3 images
-      colors: categoryColors[category] || ["Black", "White", "Gray"],
+
+      images: (
+        product.images && Array.isArray(product.images) && product.images.length >= 3
+      )
+        ? product.images.slice(0, 3)
+        : CONFIG.CATEGORY_IMAGES[product.type].slice(0, 3),
+
+      colors: categoryColors[product.type],
       rating,
       features,
       discount,
       originalPrice,
       inStock: true,
-      deliveryDays: category === "FORMAL" ? 5 : 3,
+      deliveryDays: product.type === "FORMAL" ? 5 : 3,
       material:
-        category === "FORMAL"
+        product.type === "FORMAL"
           ? "Genuine Leather"
-          : category === "SPORTS"
+          : product.type === "SPORTS"
             ? "Breathable Mesh"
             : "Synthetic Fabric",
-      warranty: category === "FORMAL" ? "1 Year" : "6 Months"
+      warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
     };
+
+
   });
 
-  console.log(`✅ Enhanced ${enhancedProducts.length} products`);
-  
-  // ✅ FIX 3: Log each product details
-  enhancedProducts.forEach(p => {
-    console.log(`📦 ${p.name}: ${p.type} | $${p.price} | Sizes: ${p.sizes} | Images: ${p.images.length}`);
-  });
+  console.log(`✅ Enhanced ${enhancedProducts.length} products with PUBLIC images`);
 
   return enhancedProducts;
 };
 
 const enhancedProducts = enhanceProducts();
-// ✅ GUARANTEE minimum 3 products per category for production
-const addMissingProducts = () => {
-  const productsByCategory = {
-    SPORTS: enhancedProducts.filter(p => p.type === "SPORTS"),
-    CASUAL: enhancedProducts.filter(p => p.type === "CASUAL"),
-    FORMAL: enhancedProducts.filter(p => p.type === "FORMAL")
-  };
-
-  Object.keys(productsByCategory).forEach(category => {
-    if (productsByCategory[category].length < 3) {
-      const needed = 3 - productsByCategory[category].length;
-      console.log(`🔄 Adding ${needed} products for ${category} category`);
-      
-      for (let i = 1; i <= needed; i++) {
-        const baseId = enhancedProducts.length + i;
-        const dummyProduct = {
-          id: baseId,
-          name: `${category.charAt(0) + category.slice(1).toLowerCase()} Premium ${i}`,
-          type: category,
-          price: category === "FORMAL" ? 60 + (i * 10) : 
-                 category === "SPORTS" ? 50 + (i * 10) : 
-                 40 + (i * 5),
-          description: `High-quality ${category.toLowerCase()} shoes for everyday comfort`,
-          sizes: [6, 7, 8, 9, 10],
-          images: CONFIG.CATEGORY_IMAGES[category] || CONFIG.CATEGORY_IMAGES.CASUAL,
-          isDummy: true // Mark as dummy for debugging
-        };
-        
-        // Enhance this dummy product
-        const enhancedDummy = {
-          ...dummyProduct,
-          colors: categoryColors[category] || ["Black", "White"],
-          rating: 4.0 + (i * 0.1),
-          features: categoryFeatures[category] || ["Comfortable", "Durable"],
-          discount: i === 1 ? 10 : 5,
-          originalPrice: (dummyProduct.price * 1.1).toFixed(2),
-          inStock: true,
-          deliveryDays: category === "FORMAL" ? 5 : 3,
-          material: category === "FORMAL" ? "Genuine Leather" : 
-                   category === "SPORTS" ? "Breathable Mesh" : "Synthetic Fabric",
-          warranty: category === "FORMAL" ? "1 Year" : "6 Months"
-        };
-        
-        enhancedProducts.push(enhancedDummy);
-      }
-    }
-  });
-  
-  console.log(`📊 Final product counts:`);
-  console.log(`• SPORTS: ${enhancedProducts.filter(p => p.type === "SPORTS").length}`);
-  console.log(`• CASUAL: ${enhancedProducts.filter(p => p.type === "CASUAL").length}`);
-  console.log(`• FORMAL: ${enhancedProducts.filter(p => p.type === "FORMAL").length}`);
-  
-  return enhancedProducts;
-};
-
-const finalProducts = addMissingProducts();
 
 // ================= WEBHOOK VERIFICATION =================
 export const verifyWebhook = (req, res) => {
@@ -522,6 +458,7 @@ async function handleBudget(phone, text, state) {
   );
 }
 
+
 async function handleSizeAndShowProducts(phone, text, state) {
   const validOptions = ['1', '2', '3', '4', '5', '6'];
 
@@ -532,61 +469,103 @@ async function handleSizeAndShowProducts(phone, text, state) {
     return;
   }
 
+  // ✅ BETTER DEBUGGING
+  console.log(`🔍 ========== FILTERING DEBUG ==========`);
+  console.log(`User State:`);
+  console.log(`• Type: ${state.type} (${state.typeName})`);
+  console.log(`• Min Price: $${state.min}`);
+  console.log(`• Max Price: $${state.max}`);
+  console.log(`• Size Selection: ${text} (${text === '1' ? 'All sizes' : 'Size ' + text})`);
+  
+  // Show ALL products first for debugging
+  console.log(`📊 ALL ENHANCED PRODUCTS (${enhancedProducts.length}):`);
+  enhancedProducts.forEach(p => {
+    console.log(`• ${p.name}: Type=${p.type}, Price=$${p.price}, Sizes=${p.sizes}`);
+  });
+
   // Filter products
   let matchedProducts = [];
 
   if (text === '1') {
+    
     // All sizes
-    matchedProducts = enhancedProducts.filter(p =>
-      p.type === state.type &&
-      p.price >= state.min &&
-      p.price <= state.max
-    );
+    matchedProducts = enhancedProducts.filter(p => {
+      const matches = p.type === state.type &&
+        p.price >= state.min &&
+        p.price <= state.max;
+      
+      if (matches) {
+        console.log(`✅ MATCH: ${p.name} - $${p.price} (${p.sizes})`);
+      }
+      return matches;
+    });
   } else {
     const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
     const selectedSize = sizeMap[text];
     state.selectedSize = selectedSize;
 
-    matchedProducts = enhancedProducts.filter(p =>
-      p.type === state.type &&
-      p.price >= state.min &&
-      p.price <= state.max &&
-      p.sizes.includes(selectedSize)
-    );
+    matchedProducts = enhancedProducts.filter(p => {
+      const matches = p.type === state.type &&
+        p.price >= state.min &&
+        p.price <= state.max &&
+        p.sizes.includes(selectedSize);
+      
+      if (matches) {
+        console.log(`✅ MATCH: ${p.name} - $${p.price} - Size ${selectedSize} in [${p.sizes}]`);
+      } else {
+        // Log why it didn't match
+        if (p.type !== state.type) {
+          console.log(`❌ TYPE MISMATCH: ${p.name} - Type: ${p.type} vs Needed: ${state.type}`);
+        } else if (p.price < state.min || p.price > state.max) {
+          console.log(`❌ PRICE MISMATCH: ${p.name} - $${p.price} not in range $${state.min}-$${state.max}`);
+        } else if (!p.sizes.includes(selectedSize)) {
+          console.log(`❌ SIZE MISMATCH: ${p.name} - Size ${selectedSize} not in [${p.sizes}]`);
+        }
+      }
+      return matches;
+    });
   }
 
-  console.log(`🔍 DEBUG: Found ${matchedProducts.length} products for:`);
-  console.log(`• Type: ${state.type}`);
-  console.log(`• Min Price: ${state.min}`);
-  console.log(`• Max Price: ${state.max}`);
-  console.log(`• Size: ${state.selectedSize || 'All'}`);
-  console.log(`Products:`, matchedProducts.map(p => p.name));
+  console.log(`🔍 Filter Results: Found ${matchedProducts.length} products`);
+  console.log(`=======================================`);
 
   if (matchedProducts.length === 0) {
+    // ✅ EXTENDED DEBUG INFO FOR NO PRODUCTS
+    const allTypeProducts = enhancedProducts.filter(p => p.type === state.type);
+    console.log(`📊 All ${state.type} products:`, allTypeProducts.map(p => ({
+      name: p.name,
+      price: p.price,
+      sizes: p.sizes
+    })));
+    
     await WhatsAppService.sendText(phone,
       `😔 *No Shoes Found*\n\n` +
       `No shoes match:\n` +
       `• ${state.typeEmoji} ${state.typeName}\n` +
       `• 💰 $${state.min} - $${state.max}\n` +
-      `• 📏 Size: ${text === '1' ? 'All' : state.selectedSize}\n\n` +
-      `Try different options with *start*`
+      `• 📏 Size: ${text === '1' ? 'All' : 'Size ' + state.selectedSize}\n\n` +
+      `Available ${state.type} shoes in database:\n` +
+      allTypeProducts.slice(0, 5).map(p => 
+        `• ${p.name} - $${p.price} (Sizes: ${p.sizes.join(',')})`
+      ).join('\n') +
+      `\n\nTry different options with *start*`
     );
 
     userState.delete(phone);
     return;
   }
 
-  // ✅ FIX: ALWAYS SHOW 3 PRODUCTS (or less if not available)
+  // ✅ FIX: ALWAYS SHOW 3 PRODUCTS (USE ENHANCED PRODUCTS ARRAY)
   const maxToShow = Math.min(CONFIG.MAX_PRODUCTS_TO_SHOW, matchedProducts.length);
   state.selectedShoes = matchedProducts.slice(0, maxToShow);
   state.totalProductsFound = matchedProducts.length;
 
-  console.log(`✅ DEBUG: Showing ${state.selectedShoes.length} products:`);
+  console.log(`✅ Showing ${state.selectedShoes.length} products:`);
   state.selectedShoes.forEach((p, i) => {
-    console.log(`${i + 1}. ${p.name} - $${p.price}`);
+    console.log(`${i + 1}. ${p.name} - $${p.price} - Sizes: ${p.sizes}`);
   });
 
-  // Send product list
+  // ✅ IMPROVED PRODUCT DISPLAY
   let productsList = `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n`;
   productsList += `👟 *Available Options:*\n\n`;
   
@@ -594,17 +573,35 @@ async function handleSizeAndShowProducts(phone, text, state) {
     productsList += `${index + 1}️⃣ *${product.name}*\n`;
     productsList += `   💰 Price: $${product.price}\n`;
     productsList += `   ⭐ Rating: ${product.rating}/5\n`;
-    productsList += `   📏 Sizes: ${product.sizes.join(', ')}\n`;
+    productsList += `   📏 Available Sizes: ${product.sizes.join(', ')}\n`;
     
     if (product.discount > 0) {
       productsList += `   🎯 Discount: ${product.discount}% OFF\n`;
     }
     
+    // Highlight selected size
+    if (state.selectedSize) {
+      if (product.sizes.includes(state.selectedSize)) {
+        productsList += `   ✅ Your Size (${state.selectedSize}) Available\n`;
+      } else {
+        productsList += `   ⚠️ Size ${state.selectedSize} not available\n`;
+      }
+    }
+    
     productsList += `   🆔 Code: SAR-${product.type.slice(0, 3)}-${String(product.id).padStart(3, '0')}\n\n`;
   }
 
-  productsList += `*Select a shoe to view details:*\n`;
-  productsList += `Reply with *1*, *2*, or *3*`;
+  // ✅ FIXED SELECTION TEXT BASED ON AVAILABLE PRODUCTS
+  if (state.selectedShoes.length === 1) {
+    productsList += `*Select this shoe to view details:*\n`;
+    productsList += `Reply with *1*`;
+  } else if (state.selectedShoes.length === 2) {
+    productsList += `*Select a shoe to view details:*\n`;
+    productsList += `Reply with *1* or *2*`;
+  } else {
+    productsList += `*Select a shoe to view details:*\n`;
+    productsList += `Reply with *1*, *2*, or *3*`;
+  }
 
   await WhatsAppService.sendText(phone, productsList);
 
@@ -613,8 +610,15 @@ async function handleSizeAndShowProducts(phone, text, state) {
   
   // Save state immediately
   userState.set(phone, state);
+  
+  // ✅ EXTENDED DEBUG
+  console.log(`📱 State saved for ${phone}:`, {
+    step: state.step,
+    selectedShoesCount: state.selectedShoes.length,
+    selectedShoes: state.selectedShoes.map(p => p.name),
+    selectedSize: state.selectedSize
+  });
 }
-
 // async function handleProductSelection(phone, text, state) {
 //   const index = parseInt(text) - 1;
 
@@ -669,40 +673,15 @@ async function handleSizeAndShowProducts(phone, text, state) {
 // }
 
 async function handleProductSelection(phone, text, state) {
-  console.log(`🔍 DEBUG: User selected: ${text}`);
-  console.log(`🔍 DEBUG: Available products: ${state.selectedShoes?.length || 0}`);
-  
-  if (state.selectedShoes) {
-    state.selectedShoes.forEach((p, i) => {
-      console.log(`Product ${i + 1}: ${p.name}`);
-    });
-  }
-
   const index = parseInt(text) - 1;
 
-  if (isNaN(index) || index < 0 || !state.selectedShoes || index >= state.selectedShoes.length) {
-    console.log(`❌ DEBUG: Invalid selection. Index: ${index}, Available: ${state.selectedShoes?.length || 0}`);
-    
-    // Send available options again
-    if (state.selectedShoes && state.selectedShoes.length > 0) {
-      let optionsText = `❌ Please select a valid option:\n\n`;
-      state.selectedShoes.forEach((p, i) => {
-        optionsText += `${i + 1}️⃣ ${p.name} — $${p.price}\n`;
-      });
-      optionsText += `\nReply with *1*${state.selectedShoes.length > 1 ? `, *2*` : ''}${state.selectedShoes.length > 2 ? `, or *3*` : ''}`;
-      
-      await WhatsAppService.sendText(phone, optionsText);
-    } else {
-      await WhatsAppService.sendText(phone, "❌ No products available. Please start again with *start*");
-      userState.delete(phone);
-    }
+  if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
+    await WhatsAppService.sendText(phone, "❌ Please select a valid option.");
     return;
   }
 
   const product = state.selectedShoes[index];
   state.chosenProduct = product;
-
-  console.log(`✅ DEBUG: Selected product: ${product.name}`);
 
   // Detailed product info
   const productMessage = `
@@ -728,16 +707,19 @@ ${product.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock Avail
 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
 `;
 
-  // Send image with details
+  // ✅ FIX: SEND ONLY FIRST IMAGE
+  console.log(`📤 Sending MAIN image for ${product.name}:`, product.images[0]);
+  
   await WhatsAppService.sendImage(
     phone,
-    product.images[0],
+    product.images[0], // ONLY FIRST IMAGE
     productMessage.trim()
   );
 
   // Ask for purchase method
   state.step = "PURCHASE";
 
+  // Small delay before purchase question
   await new Promise(res => setTimeout(res, 1000));
 
   await WhatsAppService.sendText(
@@ -753,10 +735,8 @@ ${product.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock Avail
     `   📦 ${product.deliveryDays} business days\n\n` +
     `Reply with *1* or *2*`
   );
-  
-  // Save state
-  userState.set(phone, state);
 }
+
 
 
 async function handlePurchase(phone, text, state) {
