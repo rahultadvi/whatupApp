@@ -862,7 +862,8 @@ const orderData = {
     ...details
   },
 
-  product: {
+selectedShoes: [
+  {
     id: state.selectedProduct.id,
     name: state.selectedProduct.name,
     type: state.selectedProduct.type,
@@ -870,7 +871,9 @@ const orderData = {
     size: state.selectedSize || "Not specified",
     productCode: state.selectedProduct.productCode,
     imageUrl: WhatsAppService.getSafeImage(state.selectedProduct, 0),
-  },
+  }
+],
+
 
   pricing: {
     subtotal,
