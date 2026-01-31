@@ -18,7 +18,6 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
-    // ✅ USE THIS (array of shoes)
     selectedShoes: [
       {
         id: Number,
@@ -45,6 +44,9 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// important
-export default mongoose.models.Order ||
-  mongoose.model("Order", orderSchema);
+// 🔥 FORCE CLEAR OLD MODEL
+if (mongoose.models.Order) {
+  delete mongoose.models.Order;
+}
+
+export default mongoose.model("Order", orderSchema);

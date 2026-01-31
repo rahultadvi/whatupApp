@@ -884,6 +884,13 @@ selectedShoes: [
   status: "pending"
 };
 
+console.log(
+  "DEBUG selectedShoes →",
+  typeof orderData.selectedShoes,
+  Array.isArray(orderData.selectedShoes),
+  orderData.selectedShoes
+);
+
 
   try {
     // Save to MongoDB
