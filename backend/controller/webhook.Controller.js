@@ -132,21 +132,30 @@ const enhanceProducts = () => {
   };
 
   const enhancedProducts = products.map(product => {
-    // ALWAYS use public images for WhatsApp
-    // Calculate which image to use based on product ID
     const category = product.type;
-    const productIndex = (product.id - 1) % 3; // 0, 1, or 2 for each category
-
-    // Get image from Unsplash based on category
-    let imageUrl;
-    if (CONFIG.CATEGORY_IMAGES[category] && CONFIG.CATEGORY_IMAGES[category][productIndex]) {
-      imageUrl = CONFIG.CATEGORY_IMAGES[category][productIndex];
+    
+    // ✅ FIX 1: Ensure images array exists
+    let imagesArray = [];
+    
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      // Use product's own images if available
+      imagesArray = product.images.slice(0, 3);
+    } else if (CONFIG.CATEGORY_IMAGES[category]) {
+      // Use category images
+      imagesArray = CONFIG.CATEGORY_IMAGES[category].slice(0, 3);
     } else {
-      // Fallback image
-      imageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop";
+      // Fallback
+      imagesArray = [
+        "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&auto=format&fit=crop"
+      ];
     }
 
-    console.log(`📸 Assigning image to ${product.name}: ${imageUrl}`);
+    // ✅ FIX 2: Ensure we have exactly 3 images
+    while (imagesArray.length < 3) {
+      imagesArray.push(imagesArray[0] || "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop");
+    }
 
     // Generate rating
     let rating = 4.0;
@@ -155,45 +164,100 @@ const enhanceProducts = () => {
     if (product.name.includes("Elite") || product.name.includes("Premium")) rating = 4.8;
 
     // Add features
-    const features = categoryFeatures[product.type] || ["Comfortable", "Durable", "Stylish"];
+    const features = categoryFeatures[category] || ["Comfortable", "Durable", "Stylish"];
 
     // Calculate discount
     const discount = product.price > 50 ? 10 : (product.price > 30 ? 5 : 0);
     const originalPrice = discount > 0 ? (product.price / (1 - discount / 100)).toFixed(2) : null;
+    
     return {
       ...product,
-
-      images: (
-        product.images && Array.isArray(product.images) && product.images.length >= 3
-      )
-        ? product.images.slice(0, 3)
-        : CONFIG.CATEGORY_IMAGES[product.type].slice(0, 3),
-
-      colors: categoryColors[product.type],
+      images: imagesArray, // ✅ FIXED: Always 3 images
+      colors: categoryColors[category] || ["Black", "White", "Gray"],
       rating,
       features,
       discount,
       originalPrice,
       inStock: true,
-      deliveryDays: product.type === "FORMAL" ? 5 : 3,
+      deliveryDays: category === "FORMAL" ? 5 : 3,
       material:
-        product.type === "FORMAL"
+        category === "FORMAL"
           ? "Genuine Leather"
-          : product.type === "SPORTS"
+          : category === "SPORTS"
             ? "Breathable Mesh"
             : "Synthetic Fabric",
-      warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
+      warranty: category === "FORMAL" ? "1 Year" : "6 Months"
     };
-
-
   });
 
-  console.log(`✅ Enhanced ${enhancedProducts.length} products with PUBLIC images`);
+  console.log(`✅ Enhanced ${enhancedProducts.length} products`);
+  
+  // ✅ FIX 3: Log each product details
+  enhancedProducts.forEach(p => {
+    console.log(`📦 ${p.name}: ${p.type} | $${p.price} | Sizes: ${p.sizes} | Images: ${p.images.length}`);
+  });
 
   return enhancedProducts;
 };
 
 const enhancedProducts = enhanceProducts();
+// ✅ GUARANTEE minimum 3 products per category for production
+const addMissingProducts = () => {
+  const productsByCategory = {
+    SPORTS: enhancedProducts.filter(p => p.type === "SPORTS"),
+    CASUAL: enhancedProducts.filter(p => p.type === "CASUAL"),
+    FORMAL: enhancedProducts.filter(p => p.type === "FORMAL")
+  };
+
+  Object.keys(productsByCategory).forEach(category => {
+    if (productsByCategory[category].length < 3) {
+      const needed = 3 - productsByCategory[category].length;
+      console.log(`🔄 Adding ${needed} products for ${category} category`);
+      
+      for (let i = 1; i <= needed; i++) {
+        const baseId = enhancedProducts.length + i;
+        const dummyProduct = {
+          id: baseId,
+          name: `${category.charAt(0) + category.slice(1).toLowerCase()} Premium ${i}`,
+          type: category,
+          price: category === "FORMAL" ? 60 + (i * 10) : 
+                 category === "SPORTS" ? 50 + (i * 10) : 
+                 40 + (i * 5),
+          description: `High-quality ${category.toLowerCase()} shoes for everyday comfort`,
+          sizes: [6, 7, 8, 9, 10],
+          images: CONFIG.CATEGORY_IMAGES[category] || CONFIG.CATEGORY_IMAGES.CASUAL,
+          isDummy: true // Mark as dummy for debugging
+        };
+        
+        // Enhance this dummy product
+        const enhancedDummy = {
+          ...dummyProduct,
+          colors: categoryColors[category] || ["Black", "White"],
+          rating: 4.0 + (i * 0.1),
+          features: categoryFeatures[category] || ["Comfortable", "Durable"],
+          discount: i === 1 ? 10 : 5,
+          originalPrice: (dummyProduct.price * 1.1).toFixed(2),
+          inStock: true,
+          deliveryDays: category === "FORMAL" ? 5 : 3,
+          material: category === "FORMAL" ? "Genuine Leather" : 
+                   category === "SPORTS" ? "Breathable Mesh" : "Synthetic Fabric",
+          warranty: category === "FORMAL" ? "1 Year" : "6 Months"
+        };
+        
+        enhancedProducts.push(enhancedDummy);
+      }
+    }
+  });
+  
+  console.log(`📊 Final product counts:`);
+  console.log(`• SPORTS: ${enhancedProducts.filter(p => p.type === "SPORTS").length}`);
+  console.log(`• CASUAL: ${enhancedProducts.filter(p => p.type === "CASUAL").length}`);
+  console.log(`• FORMAL: ${enhancedProducts.filter(p => p.type === "FORMAL").length}`);
+  
+  return enhancedProducts;
+};
+
+const finalProducts = addMissingProducts();
 
 // ================= WEBHOOK VERIFICATION =================
 export const verifyWebhook = (req, res) => {
@@ -491,6 +555,13 @@ async function handleSizeAndShowProducts(phone, text, state) {
     );
   }
 
+  console.log(`🔍 DEBUG: Found ${matchedProducts.length} products for:`);
+  console.log(`• Type: ${state.type}`);
+  console.log(`• Min Price: ${state.min}`);
+  console.log(`• Max Price: ${state.max}`);
+  console.log(`• Size: ${state.selectedSize || 'All'}`);
+  console.log(`Products:`, matchedProducts.map(p => p.name));
+
   if (matchedProducts.length === 0) {
     await WhatsAppService.sendText(phone,
       `😔 *No Shoes Found*\n\n` +
@@ -505,116 +576,43 @@ async function handleSizeAndShowProducts(phone, text, state) {
     return;
   }
 
-  // Store selected products
-  state.selectedShoes = matchedProducts.slice(0, CONFIG.MAX_PRODUCTS_TO_SHOW);
+  // ✅ FIX: ALWAYS SHOW 3 PRODUCTS (or less if not available)
+  const maxToShow = Math.min(CONFIG.MAX_PRODUCTS_TO_SHOW, matchedProducts.length);
+  state.selectedShoes = matchedProducts.slice(0, maxToShow);
   state.totalProductsFound = matchedProducts.length;
 
-  // Send initial message
-  // await WhatsAppService.sendText(phone,
-  //   `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
-  //   `Here are the best ${Math.min(3, matchedProducts.length)} options:`
-  // );
-const imageCount = state.selectedShoes.reduce(
-  (sum, p) => sum + (p.images?.length || 0),
-  0
-);
+  console.log(`✅ DEBUG: Showing ${state.selectedShoes.length} products:`);
+  state.selectedShoes.forEach((p, i) => {
+    console.log(`${i + 1}. ${p.name} - $${p.price}`);
+  });
 
-
-await WhatsAppService.sendText(
-  phone,
-  `🎉 *Found ${imageCount} shoe images!*\n\n` +
-  `Here are the best options:`
-);
-
-
-
-  // Send each product
+  // Send product list
+  let productsList = `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n`;
+  productsList += `👟 *Available Options:*\n\n`;
+  
   for (const [index, product] of state.selectedShoes.entries()) {
-    try {
-      // Create rich product message
-      const productMessage = `
-${state.typeEmoji} *${product.name}*
-
-${product.description}
-
-💰 *Price:* $${product.price}${product.discount > 0 ? ` (${product.discount}% OFF)` : ''}
-${product.originalPrice ? `🎯 *Was:* $${product.originalPrice}\n` : ''}
-📏 *Sizes:* ${product.sizes.join(', ')}
-🎨 *Colors:* ${product.colors.slice(0, 3).join(', ')}${product.colors.length > 3 ? '...' : ''}
-⭐ *Rating:* ${product.rating}/5 ⭐⭐⭐⭐⭐
-
-🔧 *Features:* ${product.features.slice(0, 2).join(', ')}
-🧵 *Material:* ${product.material}
-🛡️ *Warranty:* ${product.warranty}
-📦 *Delivery:* ${product.deliveryDays} days
-${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
-
-🆔 *Product Code:* SAR-${product.type.slice(0, 3)}-${String(product.id).padStart(3, '0')}
-      `;
-
-      console.log(`📤 Sending images for ${product.name}:`, product.images);
-
-
-      // Send image with caption
-      for (const img of product.images) {
-        await WhatsAppService.sendImage(
-          phone,
-          img,
-          productMessage.trim()
-        );
-
-        // thoda delay (important)
-        await new Promise(res => setTimeout(res, 1000));
-      }
-
-
-
-
-      // Delay between messages
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-    } catch (error) {
-      console.error(`Failed to send product ${product.name}:`, error.message);
-
-      // Fallback to text
-      await WhatsAppService.sendText(
-        phone,
-        `🛒 *Ready to Order?*\n\n` +
-        `Select how you'd like to proceed:\n\n` +
-        `1️⃣ Store Pickup\n` +
-        `2️⃣ Home Delivery\n\n` +
-        `Reply with *1* or *2*`
-      );
-
+    productsList += `${index + 1}️⃣ *${product.name}*\n`;
+    productsList += `   💰 Price: $${product.price}\n`;
+    productsList += `   ⭐ Rating: ${product.rating}/5\n`;
+    productsList += `   📏 Sizes: ${product.sizes.join(', ')}\n`;
+    
+    if (product.discount > 0) {
+      productsList += `   🎯 Discount: ${product.discount}% OFF\n`;
     }
+    
+    productsList += `   🆔 Code: SAR-${product.type.slice(0, 3)}-${String(product.id).padStart(3, '0')}\n\n`;
   }
+
+  productsList += `*Select a shoe to view details:*\n`;
+  productsList += `Reply with *1*, *2*, or *3*`;
+
+  await WhatsAppService.sendText(phone, productsList);
+
+  // Move to product selection step
+  state.step = "SELECT_PRODUCT";
   
-  await WhatsAppService.sendText(
-  phone,
-  `👟 *Available Shoes:*\n\n` +
-  state.selectedShoes
-    .map((p, i) => `${i + 1}️⃣ ${p.name} — $${p.price}`)
-    .join('\n') +
-  `\n\nReply with *1*, *2*, or *3*`
-);
-
-// 🔑 VERY IMPORTANT
-state.step = "SELECT_PRODUCT";
-
-  // Ask for purchase method
-
-  
-  // setTimeout(async () => {
-  //   await WhatsAppService.sendText(
-  //     phone,
-  //     `🛒 *Ready to Order?*\n\n` +
-  //     `Select how you'd like to proceed:\n\n` +
-  //     `1️⃣ Store Pickup\n` +
-  //     `2️⃣ Home Delivery\n\n` +
-  //     `Reply with *1* or *2*`
-  //   );
-  // }, 1000);
-
+  // Save state immediately
+  userState.set(phone, state);
 }
 
 // async function handleProductSelection(phone, text, state) {
@@ -671,15 +669,40 @@ state.step = "SELECT_PRODUCT";
 // }
 
 async function handleProductSelection(phone, text, state) {
+  console.log(`🔍 DEBUG: User selected: ${text}`);
+  console.log(`🔍 DEBUG: Available products: ${state.selectedShoes?.length || 0}`);
+  
+  if (state.selectedShoes) {
+    state.selectedShoes.forEach((p, i) => {
+      console.log(`Product ${i + 1}: ${p.name}`);
+    });
+  }
+
   const index = parseInt(text) - 1;
 
-  if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
-    await WhatsAppService.sendText(phone, "❌ Please select a valid option.");
+  if (isNaN(index) || index < 0 || !state.selectedShoes || index >= state.selectedShoes.length) {
+    console.log(`❌ DEBUG: Invalid selection. Index: ${index}, Available: ${state.selectedShoes?.length || 0}`);
+    
+    // Send available options again
+    if (state.selectedShoes && state.selectedShoes.length > 0) {
+      let optionsText = `❌ Please select a valid option:\n\n`;
+      state.selectedShoes.forEach((p, i) => {
+        optionsText += `${i + 1}️⃣ ${p.name} — $${p.price}\n`;
+      });
+      optionsText += `\nReply with *1*${state.selectedShoes.length > 1 ? `, *2*` : ''}${state.selectedShoes.length > 2 ? `, or *3*` : ''}`;
+      
+      await WhatsAppService.sendText(phone, optionsText);
+    } else {
+      await WhatsAppService.sendText(phone, "❌ No products available. Please start again with *start*");
+      userState.delete(phone);
+    }
     return;
   }
 
   const product = state.selectedShoes[index];
   state.chosenProduct = product;
+
+  console.log(`✅ DEBUG: Selected product: ${product.name}`);
 
   // Detailed product info
   const productMessage = `
@@ -705,19 +728,16 @@ ${product.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock Avail
 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
 `;
 
-  // ✅ FIX: SEND ONLY FIRST IMAGE
-  console.log(`📤 Sending MAIN image for ${product.name}:`, product.images[0]);
-  
+  // Send image with details
   await WhatsAppService.sendImage(
     phone,
-    product.images[0], // ONLY FIRST IMAGE
+    product.images[0],
     productMessage.trim()
   );
 
   // Ask for purchase method
   state.step = "PURCHASE";
 
-  // Small delay before purchase question
   await new Promise(res => setTimeout(res, 1000));
 
   await WhatsAppService.sendText(
@@ -733,8 +753,10 @@ ${product.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock Avail
     `   📦 ${product.deliveryDays} business days\n\n` +
     `Reply with *1* or *2*`
   );
+  
+  // Save state
+  userState.set(phone, state);
 }
-
 
 
 async function handlePurchase(phone, text, state) {
