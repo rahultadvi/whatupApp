@@ -151,6 +151,8 @@ static getSafeImage(product, index = 0) {
         
         // Create card caption in your desired format
         const cardCaption = this.formatProductCard(product, productNumber, totalProducts);
+
+        
         
         // Send image with card caption
         const imageUrl = WhatsAppService.getSafeImage(product, i);
@@ -612,24 +614,49 @@ let matchedProducts = enhancedProducts.filter(p => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Product cards send करें
-    for (let i = 0; i < productsToShow.length; i++) {
-      const product = productsToShow[i];
-      const productNumber = i + 1;
-      const totalProducts = productsToShow.length;
-      
-      // Create card caption in your desired format
-      const cardCaption = WhatsAppService.formatProductCard(product, productNumber, totalProducts);
-      
-      // Send image with card caption
-      const imageUrl = WhatsAppService.getSafeImage(product, i);
-await WhatsAppService.sendImage(phone, imageUrl, cardCaption);
+ // ✅ SAFE images array (product images OR fallback)
+const imagesToSend =
+  products.images && products.images.length > 0
+    ? products.images
+    : [WhatsAppService.getSafeImage(products, 0)];
 
-      
-      // Add delay between cards for better user experience
-      if (i < productsToShow.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-    }
+// Product cards send करें
+for (let i = 0; i < productsToShow.length; i++) {
+  const product = productsToShow[i];
+  const productNumber = i + 1;
+  const totalProducts = productsToShow.length;
+
+  const cardCaption = WhatsAppService.formatProductCard(
+    product,
+    productNumber,
+    totalProducts
+  );
+
+  // ✅ SAFE images array (product images OR fallback)
+  const imagesToSend =
+    product.images && product.images.length > 0
+      ? product.images
+      : [WhatsAppService.getSafeImage(product, 0)];
+
+  for (let imgIndex = 0; imgIndex < imagesToSend.length; imgIndex++) {
+    const imageUrl = imagesToSend[imgIndex];
+
+    await WhatsAppService.sendImage(
+      phone,
+      imageUrl,
+      imgIndex === 0 ? cardCaption : ''
+    );
+
+    await new Promise(r => setTimeout(r, 700));
+  }
+
+  // Delay between products
+  if (i < productsToShow.length - 1) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+}
+
+
     
     // Wait before sending selection instructions
     await new Promise(resolve => setTimeout(resolve, 1000));
