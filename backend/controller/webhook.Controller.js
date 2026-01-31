@@ -573,12 +573,47 @@ async function handleSizeAndShowProducts(phone, text, state) {
   state.selectedSize = selectedSize;
 
   // Filter products
+// let matchedProducts = enhancedProducts.filter(p => {
+//   if (p.type !== state.type) return false;
+//   if (p.price < state.min || p.price > state.max) return false;
+//   if (selectedSize && !p.sizes.includes(selectedSize)) return false;
+//   return true;
+// });
 let matchedProducts = enhancedProducts.filter(p => {
   if (p.type !== state.type) return false;
   if (p.price < state.min || p.price > state.max) return false;
   if (selectedSize && !p.sizes.includes(selectedSize)) return false;
   return true;
 });
+
+// 🔁 FALLBACK: agar 3 se kam mile
+if (matchedProducts.length < CONFIG.MAX_PRODUCTS_TO_SHOW) {
+  const extraProducts = enhancedProducts.filter(p => {
+    if (p.type !== state.type) return false;
+    if (matchedProducts.includes(p)) return false;
+    return true;
+  });
+
+  matchedProducts = [
+    ...matchedProducts,
+    ...extraProducts.slice(
+      0,
+      CONFIG.MAX_PRODUCTS_TO_SHOW - matchedProducts.length
+    )
+  ];
+}
+
+const shownCount = Math.min(
+  matchedProducts.length,
+  CONFIG.MAX_PRODUCTS_TO_SHOW
+);
+
+await WhatsAppService.sendText(
+  phone,
+  `🎉 *Found ${shownCount} matching shoes!*\n\nNow showing ${shownCount} best options:`
+);
+
+
 
 
   console.log(`🔍 Found ${matchedProducts.length} matching products for ${state.type}, size ${selectedSize || 'all'}, price $${state.min}-$${state.max}`);
@@ -605,20 +640,20 @@ let matchedProducts = enhancedProducts.filter(p => {
   // Show products in card format
   try {
     // पहला message भेजें
-    await WhatsAppService.sendText(phone,
-      `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
-      `Now showing ${productsToShow.length} best options:`
-    );
+    // await WhatsAppService.sendText(phone,
+    //   `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
+    //   `Now showing ${productsToShow.length} best options:`
+    // );
     
     // Wait for a moment
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Product cards send करें
  // ✅ SAFE images array (product images OR fallback)
-const imagesToSend =
-  products.images && products.images.length > 0
-    ? products.images
-    : [WhatsAppService.getSafeImage(products, 0)];
+// const imagesToSend =
+//   products.images && products.images.length > 0
+//     ? products.images
+//     : [WhatsAppService.getSafeImage(products, 0)];
 
 // Product cards send करें
 for (let i = 0; i < productsToShow.length; i++) {
@@ -632,29 +667,27 @@ for (let i = 0; i < productsToShow.length; i++) {
     totalProducts
   );
 
-  // ✅ SAFE images array (product images OR fallback)
+  // ✅ CORRECT images array (PER PRODUCT)
   const imagesToSend =
     product.images && product.images.length > 0
       ? product.images
       : [WhatsAppService.getSafeImage(product, 0)];
 
   for (let imgIndex = 0; imgIndex < imagesToSend.length; imgIndex++) {
-    const imageUrl = imagesToSend[imgIndex];
-
     await WhatsAppService.sendImage(
       phone,
-      imageUrl,
-      imgIndex === 0 ? cardCaption : ''
+      imagesToSend[imgIndex],
+      `${cardCaption}\n\n📸 Image ${imgIndex + 1}/${imagesToSend.length}`
     );
 
     await new Promise(r => setTimeout(r, 700));
   }
 
-  // Delay between products
   if (i < productsToShow.length - 1) {
     await new Promise(resolve => setTimeout(resolve, 1500));
   }
 }
+
 
 
     
