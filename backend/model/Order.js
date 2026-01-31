@@ -45,5 +45,8 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-const Order = mongoose.model("Order", orderSchema);
+// 🔥 THIS LINE FIXES THE ERROR
+const Order =
+  mongoose.models.Order || mongoose.model("Order", orderSchema);
+
 export default Order;
