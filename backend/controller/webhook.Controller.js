@@ -853,31 +853,33 @@ async function handleOrderConfirmation(phone, text, state) {
   const total = subtotal + deliveryFee;
 
   // Prepare order data for database
-  const orderData = {
-    phone: phone,
-    orderId: orderId,
-    customerDetails: {
-      ...details,
-      purchaseMethod: state.purchaseMethod
-    },
-    product: {
-      id: state.selectedProduct.id,
-      name: state.selectedProduct.name,
-      type: state.selectedProduct.type,
-      price: state.selectedProduct.price,
-      size: state.selectedSize || "Not specified",
-      productCode: state.selectedProduct.productCode,
-      imageUrl: WhatsAppService.getSafeImage(state.selectedProduct, 0)
+const orderData = {
+  phone: phone,
+  purchaseMethod: state.purchaseMethod,  
 
-    },
-    pricing: {
-      subtotal: subtotal,
-      deliveryFee: deliveryFee,
-      total: total
-    },
-    orderDate: now,
-    status: "pending"
-  };
+  customerDetails: {
+    ...details
+  },
+
+  product: {
+    id: state.selectedProduct.id,
+    name: state.selectedProduct.name,
+    type: state.selectedProduct.type,
+    price: state.selectedProduct.price,
+    size: state.selectedSize || "Not specified",
+    productCode: state.selectedProduct.productCode,
+    imageUrl: WhatsAppService.getSafeImage(state.selectedProduct, 0),
+  },
+
+  pricing: {
+    subtotal,
+    deliveryFee,
+    total
+  },
+
+  status: "pending"
+};
+
 
   try {
     // Save to MongoDB
