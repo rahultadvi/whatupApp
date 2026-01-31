@@ -8,7 +8,12 @@ const products = [
     price: 30,
     sizes: [6, 7, 8,9,10],
     description: "Affordable sports shoes for daily workout.",
-     images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+     images: [
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
+    ]
+     ,
   },
   {
     id: 2,
@@ -18,7 +23,11 @@ const products = [
     price: 55,
     sizes: [6, 7, 8,9,10],
     description: "Professional sports shoes for runners.",
-    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+    images: [
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
+    ],
   },
   {
     id: 3,
@@ -28,7 +37,12 @@ const products = [
     price: 90,
     sizes: [6, 7, 8,9,10],
     description: "Premium sports shoes with advanced grip.",
-     images:["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+     images:[
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
+
+    ],
 
   },
 
@@ -43,6 +57,8 @@ const products = [
     description: "Comfortable casual shoes for daily wear.",
     images:[ 
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
     ]
   },
   {
@@ -55,6 +71,8 @@ const products = [
     description: "Stylish casual shoes with extra comfort.",
     images:[ 
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
     ]
   },
   {
@@ -67,6 +85,8 @@ const products = [
     description: "Premium casual shoes with modern design.",
      images:[
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
      ]
   },
 
@@ -79,7 +99,11 @@ const products = [
     price: 40,
     sizes: [6,7,8,9,10],
     description: "Formal shoes for office and meetings.",
-    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+    images: [
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+          "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    ],
   
   },
   {
@@ -91,6 +115,8 @@ const products = [
     sizes: [6,7,8,9,10],
     description: "Premium formal shoes with classic finish.",
     images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
     ]
   
   },
@@ -102,7 +128,12 @@ const products = [
     price: 95,
     sizes: [6,7,8,9,10],
     description: "Luxury formal shoes for special occasions.",
-   images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+   images: [
+    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"
+    
+  ],
   },
 ];
 
