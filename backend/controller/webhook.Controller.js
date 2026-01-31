@@ -617,6 +617,59 @@ state.step = "SELECT_PRODUCT";
 
 }
 
+// async function handleProductSelection(phone, text, state) {
+//   const index = parseInt(text) - 1;
+
+//   if (isNaN(index) || index < 0 || index >= state.selectedShoes.length) {
+//     await WhatsAppService.sendText(phone, "❌ Please select a valid option.");
+//     return;
+//   }
+
+//   const product = state.selectedShoes[index];
+//   state.chosenProduct = product;
+
+//   const productMessage = `
+// 👟 *${product.name}*
+
+// ${product.description}
+
+// 💰 *Price:* $${product.price}
+// 📏 *Sizes:* ${product.sizes.join(', ')}
+// 🎨 *Colors:* ${product.colors.join(', ')}
+// ⭐ *Rating:* ${product.rating}/5
+
+// 🧵 *Material:* ${product.material}
+// 🛡️ *Warranty:* ${product.warranty}
+// 📦 *Delivery:* ${product.deliveryDays} days
+// ${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}
+
+// 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
+// `;
+
+//   // ✅ send ALL images of SELECTED product
+//   for (let i = 0; i < product.images.length; i++) {
+//     await WhatsAppService.sendImage(
+//       phone,
+//       product.images[i],
+//       i === 0 ? productMessage.trim() : ""
+//     );
+
+//     await new Promise(res => setTimeout(res, 800));
+//   }
+
+//   // next step
+//   state.step = "PURCHASE";
+
+//   await WhatsAppService.sendText(
+//     phone,
+//     `🛒 *Ready to Order?*\n\n` +
+//     `You selected: *${product.name}*\n\n` +
+//     `1️⃣ Store Pickup\n` +
+//     `2️⃣ Home Delivery\n\n` +
+//     `Reply with *1* or *2*`
+//   );
+// }
+
 async function handleProductSelection(phone, text, state) {
   const index = parseInt(text) - 1;
 
@@ -628,48 +681,59 @@ async function handleProductSelection(phone, text, state) {
   const product = state.selectedShoes[index];
   state.chosenProduct = product;
 
+  // Detailed product info
   const productMessage = `
 👟 *${product.name}*
 
 ${product.description}
 
-💰 *Price:* $${product.price}
-📏 *Sizes:* ${product.sizes.join(', ')}
-🎨 *Colors:* ${product.colors.join(', ')}
-⭐ *Rating:* ${product.rating}/5
+💰 *Price:* $${product.price}${product.discount > 0 ? ` (${product.discount}% OFF)` : ''}
+${product.originalPrice ? `🎯 *Original Price:* $${product.originalPrice}\n` : ''}
+📏 *Available Sizes:* ${product.sizes.join(', ')}
+🎨 *Colors Available:* ${product.colors.join(', ')}
+⭐ *Rating:* ${product.rating}/5 ⭐⭐⭐⭐⭐
+📊 *${product.rating >= 4.5 ? 'BESTSELLER' : 'POPULAR CHOICE'}*
+
+🔧 *Key Features:*
+${product.features.map(f => `• ${f}`).join('\n')}
 
 🧵 *Material:* ${product.material}
 🛡️ *Warranty:* ${product.warranty}
-📦 *Delivery:* ${product.deliveryDays} days
-${product.inStock ? '✅ In Stock' : '⏳ Limited Stock'}
+📦 *Delivery Time:* ${product.deliveryDays} business days
+${product.inStock ? '✅ *In Stock - Ready to Ship*' : '⏳ *Limited Stock Available*'}
 
 🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3,'0')}
 `;
 
-  // ✅ send ALL images of SELECTED product
-  for (let i = 0; i < product.images.length; i++) {
-    await WhatsAppService.sendImage(
-      phone,
-      product.images[i],
-      i === 0 ? productMessage.trim() : ""
-    );
+  // ✅ FIX: SEND ONLY FIRST IMAGE
+  console.log(`📤 Sending MAIN image for ${product.name}:`, product.images[0]);
+  
+  await WhatsAppService.sendImage(
+    phone,
+    product.images[0], // ONLY FIRST IMAGE
+    productMessage.trim()
+  );
 
-    await new Promise(res => setTimeout(res, 800));
-  }
-
-  // next step
+  // Ask for purchase method
   state.step = "PURCHASE";
+
+  // Small delay before purchase question
+  await new Promise(res => setTimeout(res, 1000));
 
   await WhatsAppService.sendText(
     phone,
-    `🛒 *Ready to Order?*\n\n` +
-    `You selected: *${product.name}*\n\n` +
-    `1️⃣ Store Pickup\n` +
-    `2️⃣ Home Delivery\n\n` +
+    `🛒 *Ready to Order ${product.name}?*\n\n` +
+    `Total Price: *$${product.price}*\n\n` +
+    `Choose your delivery method:\n\n` +
+    `1️⃣ *Store Pickup*\n` +
+    `   📍 Collect from our store\n` +
+    `   🕐 Same day pickup available\n\n` +
+    `2️⃣ *Home Delivery*\n` +
+    `   🚚 Delivered to your address\n` +
+    `   📦 ${product.deliveryDays} business days\n\n` +
     `Reply with *1* or *2*`
   );
 }
-
 
 
 
