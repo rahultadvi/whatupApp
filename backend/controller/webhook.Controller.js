@@ -71,13 +71,13 @@ class WhatsAppService {
   static async sendImage(to, imageUrl, caption = '') {
     // Always use public URLs for WhatsApp
     let finalImageUrl = imageUrl;
-    
+
     // If image is localhost or not valid, use Unsplash
     if (!imageUrl || !imageUrl.startsWith('https') || imageUrl.includes('localhost')) {
       console.warn('⚠️ Using fallback image for WhatsApp');
       finalImageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop";
     }
-    
+
     return this.sendMessage(to, {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
@@ -136,7 +136,7 @@ const enhanceProducts = () => {
     // Calculate which image to use based on product ID
     const category = product.type;
     const productIndex = (product.id - 1) % 3; // 0, 1, or 2 for each category
-    
+
     // Get image from Unsplash based on category
     let imageUrl;
     if (CONFIG.CATEGORY_IMAGES[category] && CONFIG.CATEGORY_IMAGES[category][productIndex]) {
@@ -145,51 +145,51 @@ const enhanceProducts = () => {
       // Fallback image
       imageUrl = "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop";
     }
-    
+
     console.log(`📸 Assigning image to ${product.name}: ${imageUrl}`);
-    
+
     // Generate rating
     let rating = 4.0;
     if (product.name.includes("Basic")) rating = 4.2;
     if (product.name.includes("Pro")) rating = 4.5;
     if (product.name.includes("Elite") || product.name.includes("Premium")) rating = 4.8;
-    
+
     // Add features
     const features = categoryFeatures[product.type] || ["Comfortable", "Durable", "Stylish"];
-    
+
     // Calculate discount
     const discount = product.price > 50 ? 10 : (product.price > 30 ? 5 : 0);
-    const originalPrice = discount > 0 ? (product.price / (1 - discount/100)).toFixed(2) : null;
-return {
-  ...product,
+    const originalPrice = discount > 0 ? (product.price / (1 - discount / 100)).toFixed(2) : null;
+    return {
+      ...product,
 
-  images: (
-    product.images && Array.isArray(product.images) && product.images.length >= 3
-  )
-    ? product.images.slice(0, 3)
-    : CONFIG.CATEGORY_IMAGES[product.type].slice(0, 3),
+      images: (
+        product.images && Array.isArray(product.images) && product.images.length >= 3
+      )
+        ? product.images.slice(0, 3)
+        : CONFIG.CATEGORY_IMAGES[product.type].slice(0, 3),
 
-  colors: categoryColors[product.type],
-  rating,
-  features,
-  discount,
-  originalPrice,
-  inStock: true,
-  deliveryDays: product.type === "FORMAL" ? 5 : 3,
-  material:
-    product.type === "FORMAL"
-      ? "Genuine Leather"
-      : product.type === "SPORTS"
-      ? "Breathable Mesh"
-      : "Synthetic Fabric",
-  warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
-};
+      colors: categoryColors[product.type],
+      rating,
+      features,
+      discount,
+      originalPrice,
+      inStock: true,
+      deliveryDays: product.type === "FORMAL" ? 5 : 3,
+      material:
+        product.type === "FORMAL"
+          ? "Genuine Leather"
+          : product.type === "SPORTS"
+            ? "Breathable Mesh"
+            : "Synthetic Fabric",
+      warranty: product.type === "FORMAL" ? "1 Year" : "6 Months"
+    };
 
 
   });
-  
+
   console.log(`✅ Enhanced ${enhancedProducts.length} products with PUBLIC images`);
-  
+
   return enhancedProducts;
 };
 
@@ -239,35 +239,35 @@ export const receiveMessage = async (req, res) => {
 
     const endWords = ["END", "EXIT", "BYE", "CANCEL"];
 
-if (endWords.includes(userText.toUpperCase())) {
-  userState.delete(from);
+    if (endWords.includes(userText.toUpperCase())) {
+      userState.delete(from);
 
-  await WhatsAppService.sendText(
-    from,
-    "🛑 *Chat Ended Successfully*\n\n" +
-    "Thank you for visiting *Sarwan Shoes Store* 👟\n\n" +
-    "👉 To start again, type *start*"
-  );
+      await WhatsAppService.sendText(
+        from,
+        "🛑 *Chat Ended Successfully*\n\n" +
+        "Thank you for visiting *Sarwan Shoes Store* 👟\n\n" +
+        "👉 To start again, type *start*"
+      );
 
-  return; // ⛔ stop further execution
-}
+      return; // ⛔ stop further execution
+    }
 
 
     // Initialize user state
     if (!userState.has(from)) {
-      userState.set(from, { 
+      userState.set(from, {
         step: "WELCOME",
         lastActivity: Date.now()
       });
     }
-    
+
     const state = userState.get(from);
     state.lastActivity = Date.now();
 
 
     if (state.step === "WELCOME" && userText.toLowerCase() !== "start") {
-  return;
-}
+      return;
+    }
     // ================= HANDLE MESSAGES =================
     switch (state.step) {
       case "WELCOME":
@@ -285,6 +285,9 @@ if (endWords.includes(userText.toUpperCase())) {
       case "SIZE":
         await handleSizeAndShowProducts(from, userText, state);
         break;
+      case "SELECT_PRODUCT": // 👈 YAHIN
+        await handleProductSelection(from, userText, state);
+        break;
       case "PURCHASE":
         await handlePurchase(from, userText, state);
         break;
@@ -292,11 +295,11 @@ if (endWords.includes(userText.toUpperCase())) {
         await handleOrderConfirmation(from, userText, state);
         break;
       default:
-        userState.set(from, { 
+        userState.set(from, {
           step: "WELCOME",
           lastActivity: Date.now()
         });
-        await WhatsAppService.sendText(from, 
+        await WhatsAppService.sendText(from,
           "👋 Welcome to Sarwan Shoes Store! Type *start* to begin."
         );
     }
@@ -313,7 +316,7 @@ if (endWords.includes(userText.toUpperCase())) {
 async function handleWelcome(phone, text, state) {
   if (text.toLowerCase() === 'start') {
     state.step = "LANG";
-    
+
     await WhatsAppService.sendText(phone,
       `🌍 *Choose Your Language:*\n\n` +
       `1️⃣ English\n` +
@@ -333,7 +336,7 @@ async function handleLanguage(phone, text, state) {
   if (text === '1') {
     state.step = "TYPE";
     state.language = "EN";
-    
+
     await WhatsAppService.sendText(phone, "✅ English selected.");
     await WhatsAppService.sendText(phone,
       `📦 *Choose Shoe Category:*\n\n` +
@@ -345,7 +348,7 @@ async function handleLanguage(phone, text, state) {
   } else if (text === '2') {
     state.step = "TYPE";
     state.language = "AR";
-    
+
     await WhatsAppService.sendText(phone, "✅ العربية محددة.");
     await WhatsAppService.sendText(phone,
       `📦 *اختر فئة الحذاء:*\n\n` +
@@ -365,25 +368,25 @@ async function handleLanguage(phone, text, state) {
 }
 
 async function handleShoeType(phone, text, state) {
-  const typeMap = { 
+  const typeMap = {
     '1': { type: 'CASUAL', name: 'Casual Shoes', emoji: '👟' },
     '2': { type: 'SPORTS', name: 'Sports Shoes', emoji: '🏃' },
     '3': { type: 'FORMAL', name: 'Formal Shoes', emoji: '👔' }
   };
-  
+
   if (typeMap[text]) {
     state.step = "BUDGET";
     state.type = typeMap[text].type;
     state.typeName = typeMap[text].name;
     state.typeEmoji = typeMap[text].emoji;
-    
-    await WhatsAppService.sendText(phone, 
+
+    await WhatsAppService.sendText(phone,
       `${typeMap[text].emoji} *${typeMap[text].name} selected!*`
     );
-    
+
     // Show appropriate budget ranges
     let budgetOptions, budgetRanges;
-    
+
     if (state.type === 'CASUAL') {
       budgetOptions = "1️⃣ $20 - $40 (Basic)\n2️⃣ $40 - $70 (Premium)\n3️⃣ $70+ (Luxury)";
       budgetRanges = {
@@ -406,9 +409,9 @@ async function handleShoeType(phone, text, state) {
         '3': { min: 85, max: 100, label: 'Luxury' }
       };
     }
-    
+
     state.budgetRanges = budgetRanges;
-    
+
     await WhatsAppService.sendText(phone,
       `💰 *Select Your Budget Range:*\n\n` +
       `${budgetOptions}\n\n` +
@@ -438,11 +441,11 @@ async function handleBudget(phone, text, state) {
   state.min = budget.min;
   state.max = budget.max;
   state.budgetLabel = budget.label;
-  
-  await WhatsAppService.sendText(phone, 
+
+  await WhatsAppService.sendText(phone,
     `💰 *${budget.label} Range ($${budget.min}-$${budget.max}) selected!*`
   );
-  
+
   await WhatsAppService.sendText(phone,
     `📏 *Select Your Shoe Size:*\n\n` +
     `1️⃣ All Available Sizes\n` +
@@ -457,7 +460,7 @@ async function handleBudget(phone, text, state) {
 
 async function handleSizeAndShowProducts(phone, text, state) {
   const validOptions = ['1', '2', '3', '4', '5', '6'];
-  
+
   if (!validOptions.includes(text)) {
     await WhatsAppService.sendText(phone,
       "❌ Invalid option. Please choose a valid size."
@@ -467,7 +470,7 @@ async function handleSizeAndShowProducts(phone, text, state) {
 
   // Filter products
   let matchedProducts = [];
-  
+
   if (text === '1') {
     // All sizes
     matchedProducts = enhancedProducts.filter(p =>
@@ -479,7 +482,7 @@ async function handleSizeAndShowProducts(phone, text, state) {
     const sizeMap = { '2': 6, '3': 7, '4': 8, '5': 9, '6': 10 };
     const selectedSize = sizeMap[text];
     state.selectedSize = selectedSize;
-    
+
     matchedProducts = enhancedProducts.filter(p =>
       p.type === state.type &&
       p.price >= state.min &&
@@ -497,21 +500,27 @@ async function handleSizeAndShowProducts(phone, text, state) {
       `• 📏 Size: ${text === '1' ? 'All' : state.selectedSize}\n\n` +
       `Try different options with *start*`
     );
-    
+
     userState.delete(phone);
     return;
   }
 
   // Store selected products
   state.selectedShoes = matchedProducts.slice(0, CONFIG.MAX_PRODUCTS_TO_SHOW);
-  state.step = "PURCHASE";
   state.totalProductsFound = matchedProducts.length;
 
   // Send initial message
+  // await WhatsAppService.sendText(phone,
+  //   `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
+  //   `Here are the best ${Math.min(3, matchedProducts.length)} options:`
+  // );
+  const shownCount = state.selectedShoes.length;
+
   await WhatsAppService.sendText(phone,
-    `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
-    `Here are the best ${Math.min(3, matchedProducts.length)} options:`
+    `🎉 *Found ${shownCount} matching shoes!*\n\n` +
+    `Here are the best ${shownCount} options:`
   );
+
 
   // Send each product
   for (const [index, product] of state.selectedShoes.entries()) {
@@ -534,68 +543,118 @@ ${product.originalPrice ? `🎯 *Was:* $${product.originalPrice}\n` : ''}
 📦 *Delivery:* ${product.deliveryDays} days
 ${product.inStock ? '✅ *In Stock*' : '⏳ *Limited Stock*'}
 
-🆔 *Product Code:* SAR-${product.type.slice(0,3)}-${String(product.id).padStart(3, '0')}
+🆔 *Product Code:* SAR-${product.type.slice(0, 3)}-${String(product.id).padStart(3, '0')}
       `;
 
       console.log(`📤 Sending images for ${product.name}:`, product.images);
 
-      
-      // Send image with caption
-   for (const img of product.images) {
-  await WhatsAppService.sendImage(
-    phone,
-    img,
-    productMessage.trim()
-  );
 
-  // thoda delay (important)
-  await new Promise(res => setTimeout(res, 1000));
-}
+      // Send image with caption
+      for (const img of product.images) {
+        await WhatsAppService.sendImage(
+          phone,
+          img,
+          productMessage.trim()
+        );
+
+        // thoda delay (important)
+        await new Promise(res => setTimeout(res, 1000));
+      }
+
+
+
 
       // Delay between messages
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
     } catch (error) {
       console.error(`Failed to send product ${product.name}:`, error.message);
-      
+
       // Fallback to text
-     await WhatsAppService.sendText(
-  phone,
-  `🛒 *Ready to Order?*\n\n` +
-  `Select how you'd like to proceed:\n\n` +
-  `1️⃣ Store Pickup\n` +
-  `2️⃣ Home Delivery\n\n` +
-  `Reply with *1* or *2*`
-);
+      await WhatsAppService.sendText(
+        phone,
+        `🛒 *Ready to Order?*\n\n` +
+        `Select how you'd like to proceed:\n\n` +
+        `1️⃣ Store Pickup\n` +
+        `2️⃣ Home Delivery\n\n` +
+        `Reply with *1* or *2*`
+      );
 
     }
   }
 
+        // 👇👇 YAHIN ADD KARO (loop ke baad)
+      await WhatsAppService.sendText(
+        phone,
+        `👟 *Which shoe do you like?*\n\n` +
+        state.selectedShoes
+          .map((p, i) => `${i + 1}️⃣ ${p.name}`)
+          .join('\n') +
+        `\n\nReply with *1*, *2*, or *3*`
+      );
+
+      // next step set karo
+      state.step = "SELECT_PRODUCT";
+
   // Ask for purchase method
-setTimeout(async () => {
+
+  
+  setTimeout(async () => {
+    await WhatsAppService.sendText(
+      phone,
+      `🛒 *Ready to Order?*\n\n` +
+      `Select how you'd like to proceed:\n\n` +
+      `1️⃣ Store Pickup\n` +
+      `2️⃣ Home Delivery\n\n` +
+      `Reply with *1* or *2*`
+    );
+  }, 1000);
+
+}
+
+async function handleProductSelection(phone, text, state) {
+  const index = parseInt(text) - 1;
+
+  if (
+    isNaN(index) ||
+    index < 0 ||
+    index >= state.selectedShoes.length
+  ) {
+    await WhatsAppService.sendText(
+      phone,
+      "❌ Please select a valid shoe number."
+    );
+    return;
+  }
+
+  // Selected product save karo
+  state.chosenProduct = state.selectedShoes[index];
+
+  // Ab Ready to Order dikhao
+  state.step = "PURCHASE";
+
   await WhatsAppService.sendText(
     phone,
     `🛒 *Ready to Order?*\n\n` +
-    `Select how you'd like to proceed:\n\n` +
+    `You selected: *${state.chosenProduct.name}*\n\n` +
     `1️⃣ Store Pickup\n` +
     `2️⃣ Home Delivery\n\n` +
     `Reply with *1* or *2*`
   );
-}, 1000);
-
 }
+
 
 async function handlePurchase(phone, text, state) {
   const response = text.toLowerCase();
-  
+
   if (response.includes('pickup') || response === 'btn1' || text === '1') {
     state.purchaseMethod = "STORE_PICKUP";
     state.step = "ORDER_CONFIRM";
-    
+
     await WhatsAppService.sendText(phone,
       `🏪 *Store Pickup Selected*\n\n` +
       `📍 *Store Location:*\n` +
-      
+
       `Sarwan Shoes Store\n` +
       `123 Fashion Street, City Center\n` +
       `🕐 Open: 10AM - 9PM (Mon-Sat)\n\n` +
@@ -615,7 +674,7 @@ async function handlePurchase(phone, text, state) {
   } else if (response.includes('delivery') || response.includes('home') || response === 'btn2' || text === '2') {
     state.purchaseMethod = "HOME_DELIVERY";
     state.step = "ORDER_CONFIRM";
-    
+
     await WhatsAppService.sendText(phone,
       `🚚 *Home Delivery Selected*\n\n` +
       `📦 *Delivery Info:*\n` +
@@ -660,12 +719,12 @@ async function handleOrderConfirmation(phone, text, state) {
   });
 
   // Validate
-  const required = state.purchaseMethod === "STORE_PICKUP" 
+  const required = state.purchaseMethod === "STORE_PICKUP"
     ? ['name', 'phone', 'date']
     : ['name', 'address', 'city', 'phone'];
-  
+
   const missing = required.filter(f => !details[f]);
-  
+
   if (missing.length > 0) {
     await WhatsAppService.sendText(phone,
       `❌ *Missing:* ${missing.join(', ')}\n\n` +
@@ -677,70 +736,70 @@ async function handleOrderConfirmation(phone, text, state) {
   // Generate order
   const orderId = `SAR-${Date.now().toString(36).toUpperCase().substr(-6)}`;
   const now = new Date();
-  
+
   let summary = `✅ *ORDER CONFIRMED!*\n\n`;
   summary += `📋 *Order ID:* ${orderId}\n`;
   summary += `📅 *Date:* ${now.toLocaleDateString()}\n`;
   summary += `⏰ *Time:* ${now.toLocaleTimeString()}\n`;
   summary += `📱 *Customer:* ${phone}\n\n`;
-  
+
   // Customer info
   summary += `👤 *Customer Details:*\n`;
   Object.entries(details).forEach(([key, value]) => {
     summary += `• ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}\n`;
   });
-  
+
   summary += `\n📦 *Order Summary:*\n`;
-  
+
   let subtotal = 0;
   state.selectedShoes.forEach((p, i) => {
-    summary += `\n${i+1}. ${p.name}\n`;
+    summary += `\n${i + 1}. ${p.name}\n`;
     summary += `   Price: $${p.price}\n`;
     summary += `   Size: ${state.selectedSize || 'Selected at store'}\n`;
-    summary += `   Code: SAR-${p.type.slice(0,3)}-${String(p.id).padStart(3, '0')}\n`;
+    summary += `   Code: SAR-${p.type.slice(0, 3)}-${String(p.id).padStart(3, '0')}\n`;
     subtotal += p.price;
   });
-  
+
   const deliveryFee = state.purchaseMethod === "HOME_DELIVERY" && subtotal < 50 ? 5 : 0;
   const total = subtotal + deliveryFee;
 
 
   // Save order to MongoDB
-const orderData = new Order({
-  phone: phone,
+  const orderData = new Order({
+    phone: phone,
 
-  customerDetails: details,
+    customerDetails: details,
 
-  purchaseMethod: state.purchaseMethod,
+    purchaseMethod: state.purchaseMethod,
 
-  selectedShoes: state.selectedShoes.map(p => ({
-    productId: p.id,  
-    name: p.name,
-    price: p.price,
-    size: state.selectedSize || "Store Selection",
-    code: `SAR-${p.type.slice(0,3)}-${String(p.id).padStart(3, '0')}`,
-    imageUrl: p.images[0]
-    
-
-  })),
-
-  pricing: {
-    subtotal: subtotal,
-    deliveryFee: deliveryFee,
-    total: total
-  }
-});
-
-await orderData.save();
-console.log("🗄️ Order saved in MongoDB:", orderData._id);
+    selectedShoes: state.selectedShoes.map(p => ({
+      productId: p.id,
+      name: p.name,
+      price: p.price,
+      size: state.selectedSize || "Store Selection",
+      code: `SAR-${p.type.slice(0, 3)}-${String(p.id).padStart(3, '0')}`,
+      imageUrl: p.images[0]
 
 
-  
+    })),
+
+    pricing: {
+      subtotal: subtotal,
+      deliveryFee: deliveryFee,
+      total: total
+    }
+  });
+
+  await orderData.save();
+  console.log("🗄️ Order saved in MongoDB:", orderData._id);
+
+
+
   summary += `\n💰 *Payment Summary:*\n`;
   summary += `• Subtotal: $${subtotal.toFixed(2)}\n`;
   if (deliveryFee > 0) summary += `• Delivery: $${deliveryFee.toFixed(2)}\n`;
   summary += `• *Total: $${total.toFixed(2)}*\n\n`;
-  
+
   // Next steps
   if (state.purchaseMethod === "STORE_PICKUP") {
     summary += `🏪 *Pickup Instructions:*\n`;
@@ -758,14 +817,14 @@ console.log("🗄️ Order saved in MongoDB:", orderData._id);
     summary += `4. Keep exact change ready\n\n`;
     summary += `📞 *Delivery Contact:* +91-9876543210\n`;
   }
-  
+
   summary += `📧 *Confirmation email sent*\n\n`;
   summary += `🙏 *Thank you for shopping with Sarwan Shoes!*\n`;
   summary += `Start new order: send *start*`;
-  
+
   // Send confirmation
   await WhatsAppService.sendText(phone, summary);
-  
+
   // Cleanup
   setTimeout(() => userState.delete(phone), 10000);
 }
