@@ -96,7 +96,7 @@ class WhatsAppService {
       type: 'interactive',
       interactive: {
         type: 'button',
-        body: {
+        body: {cd
           text: message
         },
         action: {
@@ -148,29 +148,28 @@ class WhatsAppService {
     }
   }
 
-  static formatProductCard(product, current, total) {
-    // Create rating stars
-    const stars = '★'.repeat(Math.floor(product.rating));
-    const halfStar = product.rating % 1 >= 0.5 ? '★' : '';
-    const emptyStars = '☆'.repeat(5 - Math.ceil(product.rating));
-    const ratingStars = stars + halfStar + emptyStars;
-    
-    // Format the card exactly as you want
-    return `${current}/${total}: ${product.name}\n\n` +
-           `💰 Price: $${product.price}\n` +
-           `${product.discount > 0 ? `🎯 Discount: ${product.discount}% OFF\n` : ''}` +
-           `📏 Sizes: ${product.sizes.join(', ')}\n` +
-           `🎨 Colors: ${product.colors.slice(0, 3).join(', ')}${product.colors.length > 3 ? '...' : ''}\n` +
-           `⭐ Rating: ${product.rating}/5 ${ratingStars}\n\n` +
-           `🔧 Features: ${product.features.slice(0, 2).join(', ')}\n` +
-           `🧵 Material: ${product.material}\n` +
-           `🛡️ Warranty: ${product.warranty}\n` +
-           `📦 Delivery: ${product.deliveryDays} days\n` +
-           `${product.inStock ? '✅ In Stock' : '⏳ Low Stock'}\n\n` +
-           `🆔 Product Code: ${product.productCode}\n\n` +
-           `*Select this product: Reply with ${current}*`;
-  }
-
+static formatProductCard(product, current, total) {
+  // Create rating stars
+  const stars = '★'.repeat(Math.floor(product.rating));
+  const halfStar = product.rating % 1 >= 0.5 ? '★' : '';
+  const emptyStars = '☆'.repeat(5 - Math.ceil(product.rating));
+  const ratingStars = stars + halfStar + emptyStars;
+  
+  // Format the card exactly as you want
+  return `${current}/${total}: ${product.name}\n\n` +
+         `💰 Price: $${product.price}\n` +
+         `${product.discount > 0 ? `🎯 Discount: ${product.discount}% OFF\n` : ''}` +
+         `📏 Sizes: ${product.sizes.join(', ')}\n` +
+         `🎨 Colors: ${product.colors.slice(0, 3).join(', ')}${product.colors.length > 3 ? '...' : ''}\n` +
+         `⭐ Rating: ${product.rating}/5 ${ratingStars}\n\n` +
+         `🔧 Features: ${product.features.slice(0, 2).join(', ')}\n` +
+         `🧵 Material: ${product.material}\n` +
+         `🛡️ Warranty: ${product.warranty}\n` +
+         `📦 Delivery: ${product.deliveryDays} days\n` +
+         `${product.inStock ? '✅ In Stock' : '⏳ Low Stock'}\n\n` +
+         `🆔 Product Code: ${product.productCode}\n\n` +
+         `*Select this product: Reply with ${current}*`;
+}
   static async sendSelectionInstructions(to, products) {
     let instructions = `*🎯 Select Your Product:*\n\n`;
     
@@ -558,16 +557,59 @@ async function handleSizeAndShowProducts(phone, text, state) {
     return;
   }
 
-  // Limit to 3 products
+  // यहाँ से UPDATE किया गया है
+  // Limit to 3 products for card display
   const productsToShow = matchedProducts.slice(0, CONFIG.MAX_PRODUCTS_TO_SHOW);
   state.selectedProducts = productsToShow;
   state.totalProductsFound = matchedProducts.length;
-
-  // Show products in card format (EXACTLY AS YOU WANTED)
-  await WhatsAppService.sendProductCards(phone, productsToShow, matchedProducts.length);
-  
   state.step = "SELECT_PRODUCT";
-  userState.set(phone, state);
+  
+  // Show products in card format
+  try {
+    // पहला message भेजें
+    await WhatsAppService.sendText(phone,
+      `🎉 *Found ${matchedProducts.length} matching shoes!*\n\n` +
+      `Now showing ${productsToShow.length} best options:`
+    );
+    
+    // Wait for a moment
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Product cards send करें
+    for (let i = 0; i < productsToShow.length; i++) {
+      const product = productsToShow[i];
+      const productNumber = i + 1;
+      const totalProducts = productsToShow.length;
+      
+      // Create card caption in your desired format
+      const cardCaption = WhatsAppService.formatProductCard(product, productNumber, totalProducts);
+      
+      // Send image with card caption
+      await WhatsAppService.sendImage(phone, product.images[0], cardCaption);
+      
+      // Add delay between cards for better user experience
+      if (i < productsToShow.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+    }
+    
+    // Wait before sending selection instructions
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Send selection instructions
+    await WhatsAppService.sendSelectionInstructions(phone, productsToShow);
+    
+  } catch (error) {
+    console.error('❌ Error sending product cards:', error);
+    // Fallback to simple text
+    await WhatsAppService.sendText(phone,
+      `🎉 Found ${matchedProducts.length} matching shoes!\n\n` +
+      productsToShow.map((p, idx) => 
+        `${idx+1}. ${p.name} - $${p.price} (${p.rating}⭐)`
+      ).join('\n\n') +
+      `\n\nReply with 1, 2, or 3 to select`
+    );
+  }
 }
 
 async function handleProductSelection(phone, text, state) {
