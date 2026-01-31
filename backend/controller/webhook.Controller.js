@@ -96,8 +96,8 @@ class WhatsAppService {
       type: 'interactive',
       interactive: {
         type: 'button',
-        body: {cd
-          text: message
+        body: {
+          text: message,
         },
         action: {
           buttons: buttons.map((btn, index) => ({
