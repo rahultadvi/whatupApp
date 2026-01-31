@@ -8,12 +8,7 @@ const products = [
     price: 30,
     sizes: [6, 7, 8,9,10],
     description: "Affordable sports shoes for daily workout.",
-     images: [
-    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
-    
+     images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
   },
   {
     id: 2,
@@ -23,11 +18,7 @@ const products = [
     price: 55,
     sizes: [6, 7, 8,9,10],
     description: "Professional sports shoes for runners.",
-    images: [
-    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
   },
   {
     id: 3,
@@ -37,12 +28,8 @@ const products = [
     price: 90,
     sizes: [6, 7, 8,9,10],
     description: "Premium sports shoes with advanced grip.",
-     images: [
-    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
-    
+     images:["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+
   },
 
   // ================= CASUAL =================
@@ -54,11 +41,9 @@ const products = [
     price: 25,
     sizes: [6, 7, 8,9,10],
     description: "Comfortable casual shoes for daily wear.",
-    images: [
+    images:[ 
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+    ]
   },
   {
     id: 5,
@@ -68,11 +53,9 @@ const products = [
     price: 50,
     sizes: [6, 7, 8,9,10],
     description: "Stylish casual shoes with extra comfort.",
-    images: [
+    images:[ 
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+    ]
   },
   {
     id: 6,
@@ -82,11 +65,9 @@ const products = [
     price: 85,
     sizes: [6, 7, 8,9,10],
     description: "Premium casual shoes with modern design.",
-     images: [
+     images:[
     "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+     ]
   },
 
   // ================= FORMAL =================
@@ -98,11 +79,8 @@ const products = [
     price: 40,
     sizes: [6,7,8,9,10],
     description: "Formal shoes for office and meetings.",
-    images: [
-    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
+  
   },
   {
     id: 8,
@@ -112,11 +90,9 @@ const products = [
     price: 65,
     sizes: [6,7,8,9,10],
     description: "Premium formal shoes with classic finish.",
-    images: [
-    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+    images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
+    ]
+  
   },
   {
     id: 9,
@@ -126,11 +102,7 @@ const products = [
     price: 95,
     sizes: [6,7,8,9,10],
     description: "Luxury formal shoes for special occasions.",
-   images: [
-    "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400",
-    "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400",
-    "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=400"
-  ]
+   images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400"],
   },
 ];
 
