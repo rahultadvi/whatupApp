@@ -571,12 +571,13 @@ async function handleSizeAndShowProducts(phone, text, state) {
   state.selectedSize = selectedSize;
 
   // Filter products
-  let matchedProducts = enhancedProducts.filter(p => {
-    if (p.type !== state.type) return false;
-    if (p.price < state.min || p.price > state.max) return false;
-    if (selectedSize && !p.sizes.includes(selectedSize)) return false;
-    return true;
-  });
+let matchedProducts = enhancedProducts.filter(p => {
+  if (p.type !== state.type) return false;
+  if (p.price < state.min || p.price > state.max) return false;
+  if (selectedSize && !p.sizes.includes(selectedSize)) return false;
+  return true;
+});
+
 
   console.log(`🔍 Found ${matchedProducts.length} matching products for ${state.type}, size ${selectedSize || 'all'}, price $${state.min}-$${state.max}`);
 
@@ -593,7 +594,6 @@ async function handleSizeAndShowProducts(phone, text, state) {
     return;
   }
 
-  // यहाँ से UPDATE किया गया है
   // Limit to 3 products for card display
   const productsToShow = matchedProducts.slice(0, CONFIG.MAX_PRODUCTS_TO_SHOW);
   state.selectedProducts = productsToShow;
