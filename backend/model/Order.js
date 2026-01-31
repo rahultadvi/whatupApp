@@ -1,50 +1,49 @@
 import mongoose from "mongoose";
 
-const orderSchema = new mongoose.Schema({
-  phone: { type: String, required: true },
+const orderSchema = new mongoose.Schema(
+  {
+    phone: { type: String, required: true },
 
-  customerDetails: {
-    name: String,
-    phone: String,
-    address: String,
-    city: String,
-    date: String,
-  },
-
-  purchaseMethod: {
-    type: String,
-    enum: ["STORE_PICKUP", "HOME_DELIVERY"],
-    required: true
-  },
-
-  selectedShoes: [
-    {
-      productId: Number,
+    customerDetails: {
       name: String,
+      phone: String,
+      address: String,
+      city: String,
+      date: String,
+    },
+
+    purchaseMethod: {
+      type: String,
+      enum: ["STORE_PICKUP", "HOME_DELIVERY"],
+      required: true,
+    },
+
+    product: {
+      id: Number,
+      name: String,
+      type: String,
       price: Number,
       size: String,
-      imageUrl: String,  
-    code: String
-  
-    }
-  ],
+      productCode: String,
+      imageUrl: String,
+    },
 
-  pricing: {
-    subtotal: Number,
-    deliveryFee: Number,
-    total: Number
+    pricing: {
+      subtotal: Number,
+      deliveryFee: Number,
+      total: Number,
+    },
+
+    status: {
+      type: String,
+      default: "pending",
+    },
   },
-
-  status: {
-    type: String,
-    default: "CONFIRMED"
-  },
-
-  createdAt: {
-    type: Date,
-    default: Date.now
+  {
+    timestamps: true,
+    strict: false,
   }
-});
+);
 
-const Order = mongoose.model("Order",orderSchema);
+const Order = mongoose.model("Order", orderSchema);
 export default Order;
