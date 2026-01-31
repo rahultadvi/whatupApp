@@ -656,37 +656,27 @@ await WhatsAppService.sendText(
 //     : [WhatsAppService.getSafeImage(products, 0)];
 
 // Product cards send करें
+// Product cards send करें
 for (let i = 0; i < productsToShow.length; i++) {
   const product = productsToShow[i];
-  const productNumber = i + 1;
-  const totalProducts = productsToShow.length;
 
   const cardCaption = WhatsAppService.formatProductCard(
     product,
-    productNumber,
-    totalProducts
+    i + 1,
+    productsToShow.length
   );
 
-  // ✅ CORRECT images array (PER PRODUCT)
-  const imagesToSend =
-    product.images && product.images.length > 0
-      ? product.images
-      : [WhatsAppService.getSafeImage(product, 0)];
+  // ✅ ONLY ONE IMAGE PER PRODUCT
+  const imageUrl = WhatsAppService.getSafeImage(product, 0);
 
-  for (let imgIndex = 0; imgIndex < imagesToSend.length; imgIndex++) {
-    await WhatsAppService.sendImage(
-      phone,
-      imagesToSend[imgIndex],
-      `${cardCaption}\n\n📸 Image ${imgIndex + 1}/${imagesToSend.length}`
-    );
+  await WhatsAppService.sendImage(phone, imageUrl, cardCaption);
 
-    await new Promise(r => setTimeout(r, 700));
-  }
-
+  // delay between products
   if (i < productsToShow.length - 1) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(r => setTimeout(r, 1200));
   }
 }
+
 
 
 
