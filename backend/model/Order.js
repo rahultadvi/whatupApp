@@ -50,7 +50,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔥 THIS is the REAL fix
+
 mongoose.models = {};
 
 export default mongoose.model("Order", orderSchema);

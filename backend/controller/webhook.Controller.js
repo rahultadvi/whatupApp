@@ -87,7 +87,7 @@ class WhatsAppService {
     });
   }
 static getSafeImage(product, index = 0) {
-  // 1️⃣ Agar product ke paas MULTIPLE images hain
+  // Agar product ke paas MULTIPLE images hain
   if (
     product.images &&
     Array.isArray(product.images) &&
@@ -96,8 +96,8 @@ static getSafeImage(product, index = 0) {
     return product.images[index % product.images.length];
   }
 
-  // 2️⃣ Agar product ke paas sirf 1 image hai
-  // 👉 category images se rotate karo
+  // Agar product ke paas sirf 1 image hai
+  //  category images se rotate karo
   const categoryImages = CONFIG.CATEGORY_IMAGES[product.type] || [];
 
   if (categoryImages.length > 0) {
@@ -572,12 +572,7 @@ async function handleSizeAndShowProducts(phone, text, state) {
   state.selectedSize = selectedSize;
 
   // Filter products
-// let matchedProducts = enhancedProducts.filter(p => {
-//   if (p.type !== state.type) return false;
-//   if (p.price < state.min || p.price > state.max) return false;
-//   if (selectedSize && !p.sizes.includes(selectedSize)) return false;
-//   return true;
-// });
+
 let matchedProducts = enhancedProducts.filter(p => {
   if (p.type !== state.type) return false;
   if (p.price < state.min || p.price > state.max) return false;
