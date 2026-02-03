@@ -8,7 +8,7 @@ import connectDB from "./config/db.js";
 import cors from "cors";
 dotenv.config();
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;  
 const app = express();
 
 

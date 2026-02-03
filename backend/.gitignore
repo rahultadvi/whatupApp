@@ -59,3 +59,9 @@ uploads/
 # MongoDB
 # =========================
 data/
+
+
+# =========================
+# Google Cloud Credentials
+# =========================
+backend/config/google.json
