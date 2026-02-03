@@ -20,7 +20,7 @@ export async function readProductsFromSheet() {
   const rows = res.data.values || [];
 
 return rows
-  .filter(row => row[2] && row[3] && row[4]) // ❗ invalid rows skip
+  .filter(row => row[2] && row[3] && row[4]) 
   .map(row => ({
     id: Number(row[0]) || 0,
     title: row[1] || "",
