@@ -340,6 +340,25 @@ static async sendImage(to, imageUrl, caption = '') {
         const messageId = message.id;
 
         console.log(`📨 Message from ${from}: "${userText}"`);
+        // ✅ GLOBAL START RESET (WORKS FROM ANY STEP)
+if (userText.toLowerCase() === "start") {
+  userState.set(from, {
+    step: "LANG",
+    lastActivity: Date.now(),
+    selectedProduct: null,
+    selectedProducts: []
+  });
+
+  await WhatsAppService.sendText(
+    from,
+    `🌍 *Choose Your Language:*\n\n` +
+    `1️⃣ English\n` +
+    `2️⃣ Arabic\n\n` +
+    `Reply with *1* or *2*`
+  );
+  return;
+}
+
 
         // Duplicate message protection
         if (processedMessages.has(messageId)) {
@@ -414,6 +433,7 @@ static async sendImage(to, imageUrl, caption = '') {
       }
     };
 
+    
     // ================= HANDLER FUNCTIONS =================
     async function handleWelcome(phone, text, state) {
       if (text.toLowerCase() === 'start') {
