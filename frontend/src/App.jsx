@@ -16,8 +16,8 @@ import { BsWhatsapp } from "react-icons/bs";
 import WhatsAppFloat from "./components/WhatsAppFloat";
 import Header from "./components/Header";
 
-// const BASE_URL = "https://whatupappnewapp.onrender.com";
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = "https://whatupappnewapp.onrender.com";
+// const BASE_URL = "http://localhost:3000";
 
 function App() {
   const [orders, setOrders] = useState([]);
