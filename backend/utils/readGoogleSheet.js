@@ -1,0 +1,37 @@
+import { google } from "googleapis";
+import path from "path";
+
+const auth = new google.auth.GoogleAuth({
+  keyFile: path.join(process.cwd(), "config/google.json"),
+  scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+});
+
+const sheets = google.sheets({ version: "v4", auth });
+
+// 👇 APNI GOOGLE SHEET ID
+const SPREADSHEET_ID = "1NA2hti5JdMahsIJeF6KT1d4SETGIFKn2t3VZJcnuvAQ";
+
+export async function readProductsFromSheet() {
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: "Sheet1!A2:H",
+  });
+
+  const rows = res.data.values || [];
+
+return rows
+  .filter(row => row[2] && row[3] && row[4]) // ❗ invalid rows skip
+  .map(row => ({
+    id: Number(row[0]) || 0,
+    title: row[1] || "",
+    name: row[2] || "Unnamed Shoe",
+    type: row[3]?.toUpperCase() || "CASUAL",
+    price: Number(row[4]) || 0,
+    sizes: row[5]
+      ? row[5].split(",").map(s => Number(s.trim()))
+      : [],
+    description: row[6] || "",
+    images: row[7] ? [row[7]] : [],
+  }));
+
+}
