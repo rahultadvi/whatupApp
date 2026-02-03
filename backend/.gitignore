@@ -65,3 +65,5 @@ data/
 # Google Cloud Credentials
 # =========================
 backend/config/google.json
+backend/.env
+.env

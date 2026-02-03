@@ -1,5 +1,11 @@
 import { google } from "googleapis";
 
+console.log(
+  "ENV LOADED:",
+  process.env.GOOGLE_SERVICE_ACCOUNT_JSON?.length
+);
+
+
 // 🔐 AUTH via ENV variable (Render + Local compatible)
 const auth = new google.auth.GoogleAuth({
   credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
