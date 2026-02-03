@@ -1,8 +1,7 @@
 import { google } from "googleapis";
-import path from "path";
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: path.join(process.cwd(), "config/google.json"),
+  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON),
   scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
 });
 
@@ -19,19 +18,18 @@ export async function readProductsFromSheet() {
 
   const rows = res.data.values || [];
 
-return rows
-  .filter(row => row[2] && row[3] && row[4]) 
-  .map(row => ({
-    id: Number(row[0]) || 0,
-    title: row[1] || "",
-    name: row[2] || "Unnamed Shoe",
-    type: row[3]?.toUpperCase() || "CASUAL",
-    price: Number(row[4]) || 0,
-    sizes: row[5]
-      ? row[5].split(",").map(s => Number(s.trim()))
-      : [],
-    description: row[6] || "",
-    images: row[7] ? [row[7]] : [],
-  }));
-
+  return rows
+    .filter(row => row[2] && row[3] && row[4])
+    .map(row => ({
+      id: Number(row[0]) || 0,
+      title: row[1] || "",
+      name: row[2] || "Unnamed Shoe",
+      type: row[3]?.toUpperCase() || "CASUAL",
+      price: Number(row[4]) || 0,
+      sizes: row[5]
+        ? row[5].split(",").map(s => Number(s.trim()))
+        : [],
+      description: row[6] || "",
+      images: row[7] ? [row[7]] : [],
+    }));
 }
